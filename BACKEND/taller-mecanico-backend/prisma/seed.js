@@ -1,32 +1,24 @@
 // Ejecutar con: node prisma/seed.js
-// Crea los roles base necesarios para RF-08 (Gestion de Usuarios)
-const { PrismaClient } = require('@prisma/client');
-const prisma = new PrismaClient();
-const bcrypt = require('bcryptjs');
+// Crea los roles base (RF-08) y un usuario administrador semilla, para poder
+// hacer el primer login y desde ahi crear al resto de usuarios via /api/auth/registro.
 require('dotenv').config();
+const { PrismaClient } = require('@prisma/client');
+const bcrypt = require('bcryptjs');
+const prisma = new PrismaClient();
 
 const ROLES = ['recepcionista', 'mecanico', 'supervisor', 'administrador'];
 
 async function main() {
-  // for (const nombre of ROLES) {
-  //   await prisma.rol.create({
-      
-      
-  //     data: {
-  //       nombre: nombre,
-  //     },
-    
-  //   });
-  // }
- 
-  //console.log('Roles base creados/verificados:', ROLES.join(', '));
-//   for (i = 2; i<6; i++){
-// const variables = await prisma.rol.delete({where : { id: i}});
-//   }
+  for (const nombre of ROLES) {
+    await prisma.rol.upsert({
+      where: { nombre },
+      update: {},
+      create: { nombre },
+    });
+  }
+  console.log('Roles base creados/verificados:', ROLES.join(', '));
 
-// const variable = await prisma.rol.findMany();
-// console.log(variable)
-   const rolAdmin = await prisma.rol.findUnique({ where: { id: 9 } });
+  const rolAdmin = await prisma.rol.findUnique({ where: { nombre: 'administrador' } });
   const email = process.env.SEED_ADMIN_EMAIL || 'admin@taller.com';
   const password = process.env.SEED_ADMIN_PASSWORD || 'Admin12345!';
 
@@ -36,9 +28,9 @@ async function main() {
     return;
   }
 
-  const contrasena_hash = await bcrypt.hash(password, 10);
+  const passwordHash = await bcrypt.hash(password, 10);
   await prisma.usuario.create({
-    data: { nombre: 'Administrador', email, contrasena_hash, rolId: rolAdmin.id },
+    data: { nombre: 'Administrador', email, passwordHash, rolId: rolAdmin.id },
   });
 
   console.log('--------------------------------------------------');
@@ -47,7 +39,6 @@ async function main() {
   console.log(`  password: ${password}`);
   console.log('Cambia esta contraseña (o borra este usuario) antes de produccion.');
   console.log('--------------------------------------------------');
-
 }
 
 main()

@@ -11,14 +11,14 @@ async function login(req, res) {
     where: { email },
     include: { rol: true },
   });
-  console.log(usuario)
-  if (!usuario || !usuario.estado) throw ApiError.unauthorized('Credenciales invalidas. NO USER');
+  if (!usuario || !usuario.activo) throw ApiError.unauthorized('Credenciales invalidas_NO USER.');
 
-  const passwordValido = await bcrypt.compare(password, usuario.contrasena_hash);
+  console.log(password)
+  const passwordValido = await bcrypt.compare(password, usuario.passwordHash);
   if (!passwordValido) throw ApiError.unauthorized('Credenciales invalidas.');
 
   const token = jwt.sign(
-    { id: usuario.id, rol: usuario.rol.nombre/*, sucursalId: usuario.sucursalId */},
+    { id: usuario.id, rol: usuario.rol.nombre, sucursalId: usuario.sucursalId },
     process.env.JWT_SECRET,
     { expiresIn: process.env.JWT_EXPIRES_IN || '8h' }
   );
