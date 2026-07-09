@@ -1,0 +1,130 @@
+
+.dashboard-container {
+  min-height: 100vh;
+  width: 100vw;
+  background-color: #000000;
+  color: #ffffff;
+  display: flex;
+  flex-direction: column;
+  overflow-x: hidden;
+}
+
+.hero-banner {
+  position: relative;
+  min-height: 380px;
+  display: flex;
+  align-items: center;
+  padding: 0 6%;
+  background: 
+    linear-gradient(115deg, transparent 67%, #dc2626 67%, #dc2626 67.5%, #080c16 67.5%, #060913 100%),
+    radial-gradient(circle at 25% 50%, rgba(180, 20, 20, 0.35) 0%, rgba(12, 6, 6, 0.95) 75%);
+  background-color: #0b0505;
+}
+
+.hero-content {
+  position: relative;
+  z-index: 2;
+  max-width: 600px;
+}
+
+.hero-subtitle {
+  color: #dc2626;
+  font-size: 2.25rem;
+  font-weight: 900;
+  letter-spacing: 0.01em;
+  margin-bottom: 0.25rem;
+}
+
+.hero-title {
+  color: #ffffff;
+  font-size: 2.4rem;
+  font-weight: 800;
+  line-height: 1.15;
+  margin-bottom: 1.75rem;
+}
+
+.hero-badge {
+  color: #dc2626;
+  font-size: 0.85rem;
+  font-weight: 800;
+  letter-spacing: 0.15em;
+  display: inline-block;
+  padding-bottom: 0.4rem;
+  border-bottom: 2px solid #dc2626;
+}
+
+.stats-section {
+  background-color: #000000;
+  padding: 2.5rem 6%;
+}
+
+.stats-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: 1.5rem;
+  max-width: 1400px;
+}
+
+.stat-card {
+  background-color: #0b111e;
+  border: 1px solid rgba(255, 255, 255, 0.03);
+  border-radius: 2px;
+  padding: 2.75rem 1.5rem;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  gap: 0.6rem;
+  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.5);
+}
+
+.stat-tag {
+  font-size: 0.7rem;
+  font-weight: 800;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+
+.tag-warning {
+  color: #f59e0b;
+}
+
+.tag-danger {
+  color: #ef4444;
+}
+
+.stat-value {
+  color: #ffffff;
+  font-size: 1.5rem;
+  font-weight: 800;
+}
+
+@media (max-width: 900px) {
+  .navbar {
+    flex-direction: column;
+    height: auto;
+    padding: 1rem 0;
+    gap: 1rem;
+  }
+  
+  .navbar-menu {
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 1rem;
+  }
+
+  .hero-banner {
+    padding: 3rem 1.5rem;
+    min-height: 300px;
+    background: radial-gradient(circle at center, rgba(180, 20, 20, 0.3) 0%, #0b0505 80%);
+  }
+
+  .hero-subtitle {
+    font-size: 1.75rem;
+  }
+
+  .hero-title {
+    font-size: 1.9rem;
+  }
+}
