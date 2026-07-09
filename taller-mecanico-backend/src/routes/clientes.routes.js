@@ -8,11 +8,23 @@ const { verifyToken, authorize } = require('../middlewares/auth.middleware');
 const router = Router();
 
 const reglasCliente = [
-  body('tipoCliente').isIn(['natural', 'juridico']).withMessage('tipoCliente debe ser natural o juridico'),
-  body('tipoIdentificacion').notEmpty().withMessage('tipoIdentificacion es requerida'),
-  body('identificacion').notEmpty().withMessage('identificacion es requerida'),
-  body('nombre').notEmpty().withMessage('nombre es requerido'),
-  body('email').optional({ nullable: true }).isEmail().withMessage('email invalido'),
+  // 1. Validamos la clave foránea (debe ser un número entero)
+  body('id_tipo_identificacion')
+    .notEmpty().withMessage('El id_tipo_identificacion es requerido')
+    .isInt().withMessage('El id_tipo_identificacion debe ser un número entero'),
+
+  // 2. Validamos el número de documento (cédula, RNC, etc. ¡Te faltaba este!)
+  body('identificacion')
+    .notEmpty().withMessage('La identificacion es requerida'),
+
+  // 3. Validamos el nombre
+  body('nombre')
+    .notEmpty().withMessage('El nombre es requerido'),
+
+  // 4. Validamos el email (es opcional, pero si se envía, debe tener formato de correo)
+  body('email')
+    .optional({ nullable: true, checkFalsy: true })
+    .isEmail().withMessage('El email tiene un formato inválido')
 ];
 
 router.use(verifyToken);

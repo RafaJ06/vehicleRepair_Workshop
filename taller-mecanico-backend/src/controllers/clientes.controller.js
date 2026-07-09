@@ -27,9 +27,9 @@ async function listar(req, res) {
 // GET /api/clientes/:id
 async function obtener(req, res) {
   const id = Number(req.params.id);
-  const cliente = await prisma.cliente.findUnique({
-    where: { id },
-    include: { vehiculos: true },
+  const cliente = await prisma.cliente.findMany({
+    where: { id:id },
+    include: { clientes_vehiculos: true },
   });
   if (!cliente) throw ApiError.notFound('Cliente no encontrado.');
   res.json(cliente);
@@ -37,12 +37,32 @@ async function obtener(req, res) {
 
 // POST /api/clientes
 async function crear(req, res) {
-  const { tipoCliente, tipoIdentificacion, identificacion, nombre, telefono, direccion, email } = req.body;
+  try {
+    const { 
+      id_tipo_identificacion, 
+      identificacion, 
+      nombre, 
+      telefono, 
+      direccion, 
+      email 
+    } = req.body;
 
-  const cliente = await prisma.cliente.create({
-    data: { tipoCliente, tipoIdentificacion, identificacion, nombre, telefono, direccion, email },
-  });
-  res.status(201).json(cliente);
+    const cliente = await prisma.cliente.create({
+      data: { 
+        id_tipo_identificacion, 
+        identificacion, 
+        nombre, 
+        telefono, 
+        direccion, 
+        email 
+      },
+    });
+
+    res.status(201).json(cliente);
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ error: "Hubo un error al crear el cliente." });
+  }
 }
 
 // PUT /api/clientes/:id
