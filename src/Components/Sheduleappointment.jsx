@@ -3,6 +3,7 @@ import { Calendar, CheckCircle } from 'lucide-react';
 import {Header_Client} from './Header';
 import '../Style/ScheduleAppointment.css';
 
+
 const ScheduleAppointment = () => {
   const [formData, setFormData] = useState({
     vehiculo: '',

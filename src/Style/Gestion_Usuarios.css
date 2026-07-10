@@ -1,0 +1,260 @@
+
+.management-container {
+  min-height: 100vh;
+  width: 100vw;
+  background-color: #000000;
+  color: #ffffff;
+  display: flex;
+  flex-direction: column;
+  overflow-x: hidden;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+}
+
+.management-hero {
+  position: relative;
+  min-height: 200px;
+  display: flex;
+  align-items: center;
+  padding: 0 6%;
+  background: 
+    linear-gradient(115deg, transparent 67%, #dc2626 67%, #dc2626 67.5%, #080c16 67.5%, #060913 100%),
+    radial-gradient(circle at 25% 50%, rgba(180, 20, 20, 0.25) 0%, rgba(12, 6, 6, 0.95) 75%);
+  background-color: #0b0505;
+  border-bottom: 1px solid #111111;
+}
+
+.management-hero-content {
+  position: relative;
+  z-index: 2;
+}
+
+.management-hero-title {
+  font-size: 3rem;
+  font-weight: 900;
+  letter-spacing: -0.02em;
+  margin-bottom: 0.5rem;
+  line-height: 1;
+}
+
+.text-white { color: #ffffff; }
+.text-red { color: #dc2626; }
+.text-gray { color: #9ca3af; }
+
+.management-hero-subtitle {
+  color: #9ca3af;
+  font-size: 0.85rem;
+  font-weight: 600;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+}
+
+.management-main {
+  padding: 3rem 6%;
+  flex-grow: 1;
+}
+
+.section-header {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  margin-bottom: 1.5rem;
+  border-bottom: 1px solid #1f2937;
+  padding-bottom: 1rem;
+}
+
+.section-title {
+  font-size: 1.15rem;
+  font-weight: 800;
+  color: #ffffff;
+  letter-spacing: 0.05em;
+}
+
+.error-banner {
+  background-color: rgba(239, 68, 68, 0.1);
+  border: 1px solid #7f1d1d;
+  color: #ef4444;
+  padding: 1rem;
+  border-radius: 4px;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin-bottom: 1.5rem;
+  font-size: 0.85rem;
+  font-weight: 600;
+}
+
+.table-wrapper {
+  background-color: #0b111e;
+  border: 1px solid #1f2937;
+  border-radius: 4px;
+  overflow-x: auto;
+}
+
+.management-table {
+  width: 100%;
+  border-collapse: collapse;
+  text-align: left;
+}
+
+.management-table th {
+  color: #dc2626;
+  font-size: 0.75rem;
+  font-weight: 800;
+  padding: 1.25rem 1.5rem;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  border-bottom: 1px solid #7f1d1d;
+  background-color: rgba(15, 23, 42, 0.4);
+}
+
+.management-table td {
+  padding: 1rem 1.5rem;
+  border-bottom: 1px solid #1f2937;
+  vertical-align: middle;
+}
+
+.row-inactive {
+  opacity: 0.6;
+  background-color: rgba(0, 0, 0, 0.2);
+}
+
+.text-center { text-align: center; }
+.py-4 { padding-top: 2rem; padding-bottom: 2rem; }
+
+.user-info-cell {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.user-name {
+  color: #ffffff;
+  font-weight: 800;
+  font-size: 0.95rem;
+}
+
+.user-email {
+  color: #9ca3af;
+  font-size: 0.75rem;
+}
+
+.branch-badge {
+  color: #d1d5db;
+  font-size: 0.75rem;
+  font-weight: 600;
+  background-color: #1f2937;
+  padding: 0.3rem 0.6rem;
+  border-radius: 4px;
+  letter-spacing: 0.05em;
+}
+
+.role-select-wrapper {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+}
+
+.role-icon {
+  position: absolute;
+  left: 0.75rem;
+  color: #9ca3af;
+  pointer-events: none;
+}
+
+.role-select {
+  appearance: none;
+  background-color: #111622;
+  color: #e5e7eb;
+  border: 1px solid #374151;
+  border-radius: 4px;
+  padding: 0.5rem 2rem 0.5rem 2.25rem;
+  font-size: 0.75rem;
+  font-weight: 700;
+  outline: none;
+  cursor: pointer;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' stroke='%239ca3af'%3E%3Cpath stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='M19 9l-7 7-7-7'%3E%3C/path%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 0.75rem center;
+  background-size: 1em;
+  transition: border-color 0.2s ease;
+}
+
+.role-select:focus {
+  border-color: #dc2626;
+}
+
+.role-select:disabled {
+  opacity: 0.7;
+  cursor: not-allowed;
+}
+
+.status-badge {
+  display: inline-block;
+  padding: 0.35rem 0.6rem;
+  font-size: 0.65rem;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  border-radius: 2px;
+}
+
+.badge-active {
+  border: 1px solid #22c55e;
+  color: #22c55e;
+  background-color: rgba(34, 197, 94, 0.1);
+}
+
+.badge-inactive {
+  border: 1px solid #6b7280;
+  color: #9ca3af;
+  background-color: rgba(107, 114, 128, 0.1);
+}
+
+.btn-action {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.5rem 1rem;
+  font-size: 0.7rem;
+  font-weight: 800;
+  letter-spacing: 0.05em;
+  border-radius: 4px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  border: none;
+}
+
+.btn-deactivate {
+  background-color: transparent;
+  border: 1px solid #ef4444;
+  color: #ef4444;
+}
+
+.btn-deactivate:hover {
+  background-color: rgba(239, 68, 68, 0.1);
+}
+
+.btn-activate {
+  background-color: #22c55e;
+  color: #ffffff;
+}
+
+.btn-activate:hover {
+  background-color: #16a34a;
+}
+
+@media (max-width: 1024px) {
+  .management-hero-title {
+    font-size: 2.5rem;
+  }
+}
+
+@media (max-width: 768px) {
+  .management-main {
+    padding: 2rem 1.5rem;
+  }
+  
+  .role-select {
+    width: 100%;
+  }
+}

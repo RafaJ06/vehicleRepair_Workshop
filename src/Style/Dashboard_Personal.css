@@ -1,5 +1,5 @@
-
-.dashboard-container {
+/* Contenedor Global */
+.operative-container {
   min-height: 100vh;
   width: 100vw;
   background-color: #000000;
@@ -7,124 +7,224 @@
   display: flex;
   flex-direction: column;
   overflow-x: hidden;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
 }
 
-.hero-banner {
+/* ================= BANNER (HERO) ================= */
+.op-hero {
   position: relative;
-  min-height: 380px;
+  min-height: 250px;
   display: flex;
   align-items: center;
   padding: 0 6%;
+  /* Gradiente con corte diagonal exacto al de la imagen */
   background: 
     linear-gradient(115deg, transparent 67%, #dc2626 67%, #dc2626 67.5%, #080c16 67.5%, #060913 100%),
-    radial-gradient(circle at 25% 50%, rgba(180, 20, 20, 0.35) 0%, rgba(12, 6, 6, 0.95) 75%);
+    radial-gradient(circle at 25% 50%, rgba(180, 20, 20, 0.25) 0%, rgba(12, 6, 6, 0.95) 75%);
   background-color: #0b0505;
+  border-bottom: 1px solid #111111;
 }
 
-.hero-content {
+.op-hero-content {
   position: relative;
   z-index: 2;
-  max-width: 600px;
 }
 
-.hero-subtitle {
-  color: #dc2626;
-  font-size: 2.25rem;
+.op-hero-title {
+  font-size: 3.5rem;
   font-weight: 900;
-  letter-spacing: 0.01em;
-  margin-bottom: 0.25rem;
+  letter-spacing: -0.02em;
+  margin-bottom: 0.5rem;
+  line-height: 1;
 }
 
-.hero-title {
+.text-white {
   color: #ffffff;
-  font-size: 2.4rem;
-  font-weight: 800;
-  line-height: 1.15;
-  margin-bottom: 1.75rem;
 }
 
-.hero-badge {
+.text-red {
   color: #dc2626;
-  font-size: 0.85rem;
-  font-weight: 800;
-  letter-spacing: 0.15em;
-  display: inline-block;
-  padding-bottom: 0.4rem;
-  border-bottom: 2px solid #dc2626;
 }
 
-.stats-section {
-  background-color: #000000;
-  padding: 2.5rem 6%;
-}
-
-.stats-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
-  gap: 1.5rem;
-  max-width: 1400px;
-}
-
-.stat-card {
-  background-color: #0b111e;
-  border: 1px solid rgba(255, 255, 255, 0.03);
-  border-radius: 2px;
-  padding: 2.75rem 1.5rem;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  text-align: center;
-  gap: 0.6rem;
-  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.5);
-}
-
-.stat-tag {
-  font-size: 0.7rem;
-  font-weight: 800;
-  letter-spacing: 0.1em;
+.op-hero-subtitle {
+  color: #9ca3af;
+  font-size: 0.9rem;
+  font-weight: 600;
+  letter-spacing: 0.05em;
   text-transform: uppercase;
 }
 
-.tag-warning {
-  color: #f59e0b;
+/* ================= CONTENIDO PRINCIPAL ================= */
+.op-main-content {
+  padding: 3rem 6%;
+  flex-grow: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 3.5rem;
 }
 
-.tag-danger {
-  color: #ef4444;
+/* Cabeceras de Sección con línea inferior */
+.op-section-header {
+  border-bottom: 1px solid #1f2937;
+  padding-bottom: 1rem;
+  margin-bottom: 1.5rem;
 }
 
-.stat-value {
+.op-section-title {
+  font-size: 1.15rem;
+  font-weight: 800;
   color: #ffffff;
-  font-size: 1.5rem;
+  letter-spacing: 0.05em;
+}
+
+/* ================= TARJETAS DE RESUMEN ================= */
+.summary-grid {
+  display: flex;
+  gap: 1.5rem;
+  flex-wrap: wrap;
+}
+
+.summary-card {
+  background-color: #05070a;
+  border: 1px solid #1f2937;
+  border-radius: 4px;
+  padding: 1.5rem;
+  width: 100%;
+  max-width: 320px;
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.summary-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.summary-label {
+  color: #9ca3af;
+  font-size: 0.75rem;
+  font-weight: 800;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+}
+
+.summary-icon {
+  color: #dc2626;
+}
+
+.summary-body {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.summary-value {
+  font-size: 2.5rem;
+  font-weight: 800;
+  color: #ffffff;
+  line-height: 1;
+}
+
+.summary-subtext {
+  font-size: 0.7rem;
+  font-weight: 800;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+}
+
+.text-warning {
+  color: #eab308;
+}
+
+.text-success {
+  color: #22c55e;
+}
+
+/* ================= TABLA DE TRABAJOS ================= */
+.op-table-wrapper {
+  background-color: #0b111e;
+  border: 1px solid #1f2937;
+  border-radius: 4px;
+  overflow-x: auto;
+}
+
+.op-table {
+  width: 100%;
+  border-collapse: collapse;
+  text-align: left;
+}
+
+.op-table th {
+  color: #dc2626;
+  font-size: 0.75rem;
+  font-weight: 800;
+  padding: 1.25rem 1.5rem;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  border-bottom: 1px solid #7f1d1d;
+  background-color: rgba(15, 23, 42, 0.4);
+}
+
+.op-table td {
+  padding: 1.25rem 1.5rem;
+  border-bottom: 1px solid #1f2937;
+  font-size: 0.85rem;
+}
+
+.op-table tr:last-child td {
+  border-bottom: none;
+}
+
+/* Estilos de celdas */
+.cell-id, .cell-vehicle {
+  color: #ffffff;
   font-weight: 800;
 }
 
-@media (max-width: 900px) {
-  .navbar {
-    flex-direction: column;
-    height: auto;
-    padding: 1rem 0;
-    gap: 1rem;
+.cell-task {
+  color: #9ca3af;
+}
+
+/* ================= BADGES (ETIQUETAS DE ESTADO) ================= */
+.op-badge {
+  display: inline-block;
+  padding: 0.35rem 0.6rem;
+  font-size: 0.65rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  border-radius: 2px;
+  background: transparent;
+}
+
+.badge-warning {
+  border: 1px solid #eab308;
+  color: #eab308;
+}
+
+.badge-success {
+  border: 1px solid #22c55e;
+  color: #22c55e;
+}
+
+.badge-default {
+  border: 1px solid #4b5563;
+  color: #9ca3af;
+}
+
+/* ================= RESPONSIVE ================= */
+@media (max-width: 768px) {
+  .op-hero-title {
+    font-size: 2.5rem;
   }
   
-  .navbar-menu {
-    flex-wrap: wrap;
-    justify-content: center;
-    gap: 1rem;
+  .summary-card {
+    max-width: 100%;
   }
 
-  .hero-banner {
-    padding: 3rem 1.5rem;
-    min-height: 300px;
-    background: radial-gradient(circle at center, rgba(180, 20, 20, 0.3) 0%, #0b0505 80%);
-  }
-
-  .hero-subtitle {
-    font-size: 1.75rem;
-  }
-
-  .hero-title {
-    font-size: 1.9rem;
+  .op-main-content {
+    padding: 2rem 1.5rem;
   }
 }
