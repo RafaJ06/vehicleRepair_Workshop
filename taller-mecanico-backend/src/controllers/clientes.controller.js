@@ -68,11 +68,11 @@ async function crear(req, res) {
 // PUT /api/clientes/:id
 async function actualizar(req, res) {
   const id = Number(req.params.id);
-  const { tipoCliente, tipoIdentificacion, identificacion, nombre, telefono, direccion, email } = req.body;
+  const { tipoCliente, id_tipo_identificacion, identificacion, nombre, telefono, direccion, email } = req.body;
 
   const cliente = await prisma.cliente.update({
     where: { id },
-    data: { tipoCliente, tipoIdentificacion, identificacion, nombre, telefono, direccion, email },
+    data: { tipoCliente, id_tipo_identificacion, identificacion, nombre, telefono, direccion, email },
   });
   res.json(cliente);
 }

@@ -24,22 +24,22 @@ async function main() {
 // const variables = await prisma.rol.delete({where : { id: i}});
 //   }
 
-// const variable = await prisma.rol.findMany();
-// console.log(variable)
-   const rolAdmin = await prisma.rol.findUnique({ where: { id: 9 } });
-  const email = process.env.SEED_ADMIN_EMAIL || 'admin@taller.com';
-  const password = process.env.SEED_ADMIN_PASSWORD || 'Admin12345!';
+const variable = await prisma.rol.findMany();
+ console.log(variable)
+  //  const rolAdmin = await prisma.rol.findUnique({ where: { id: 9 } });
+  // const email = process.env.SEED_ADMIN_EMAIL || 'admin@taller.com';
+  // const password = process.env.SEED_ADMIN_PASSWORD || 'Admin12345!';
 
-  const existente = await prisma.usuario.findUnique({ where: { email } });
-  if (existente) {
-    console.log(`El usuario administrador (${email}) ya existia, no se toco.`);
-    return;
-  }
+  // const existente = await prisma.usuario.findUnique({ where: { email } });
+  // if (existente) {
+  //   console.log(`El usuario administrador (${email}) ya existia, no se toco.`);
+  //   return;
+  // }
 
-  const contrasena_hash = await bcrypt.hash(password, 10);
-  await prisma.usuario.create({
-    data: { nombre: 'Administrador', email, contrasena_hash, rolId: rolAdmin.id },
-  });
+  // const contrasena_hash = await bcrypt.hash(password, 10);
+  // await prisma.usuario.create({
+  //   data: { nombre: 'Administrador', email, contrasena_hash, rolId: rolAdmin.id },
+  // });
 
   console.log('--------------------------------------------------');
   console.log('Usuario administrador semilla creado. Usalo para el primer login:');

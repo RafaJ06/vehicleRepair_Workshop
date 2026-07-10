@@ -31,20 +31,20 @@ async function login(req, res) {
 
 // POST /api/auth/registro  (normalmente solo el administrador crea usuarios -> ver rutas)
 async function registro(req, res) {
-  const { nombre, email, password, rolNombre, sucursalId } = req.body;
+  const { nombre, email, password, rolID } = req.body;
 
-  const rol = await prisma.rol.findUnique({ where: { nombre: rolNombre } });
+  const rol = await prisma.rol.findUnique({ where: { id: rolID } });
   if (!rol) throw ApiError.badRequest('El rol indicado no existe.');
 
-  const passwordHash = await bcrypt.hash(password, 10);
+  const contrasena_hash = await bcrypt.hash(password, 10);
 
   const usuario = await prisma.usuario.create({
     data: {
       nombre,
       email,
-      passwordHash,
+      contrasena_hash,
       rolId: rol.id,
-      sucursalId: sucursalId ? Number(sucursalId) : null,
+     // sucursalId: sucursalId ? Number(sucursalId) : null,
     },
     include: { rol: true },
   });
@@ -56,15 +56,15 @@ async function registro(req, res) {
 async function perfil(req, res) {
   const usuario = await prisma.usuario.findUnique({
     where: { id: req.user.id },
-    include: { rol: true, sucursal: true },
+    include: { rol: true },
   });
+  console.log(req.user.id)
   if (!usuario) throw ApiError.notFound('Usuario no encontrado.');
   res.json({
     id: usuario.id,
     nombre: usuario.nombre,
     email: usuario.email,
     rol: usuario.rol.nombre,
-    sucursal: usuario.sucursal?.nombre ?? null,
   });
 }
 
