@@ -1,0 +1,228 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
+}
+
+model Rol {
+  id       Int       @id @default(autoincrement()) @map("id_rol")
+  nombre   String    @db.VarChar(50)
+  estado   Boolean?  @default(true)
+  usuarios Usuario[]
+
+  @@map("roles")
+}
+
+model Usuario {
+  id                               Int                                @id @default(autoincrement()) @map("id_usuario")
+  rolId                            Int?                               @map("id_rol")
+  nombre                           String                             @db.VarChar(100)
+  email                            String                             @unique @db.VarChar(100)
+  contrasena_hash                  String                             @db.VarChar(255)
+  estado                           Boolean?                           @default(true)
+  asignacion_mecanicos_diagnostico asignacion_mecanicos_diagnostico[]
+  ordenesAsignadas                 OrdenTrabajo[]                     @relation("MecanicoAsignado")
+  rol                              Rol?                               @relation(fields: [rolId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+
+  @@map("usuarios")
+}
+
+model Cliente {
+  id                     Int                  @id @default(autoincrement()) @map("id_cliente")
+  id_tipo_identificacion Int?
+  identificacion         String               @unique @db.VarChar(20)
+  nombre                 String               @db.VarChar(100)
+  telefono               String?              @db.VarChar(20)
+  direccion              String?
+  email                  String?              @db.VarChar(100)
+  fecha_creacion         DateTime?            @default(now()) @db.Timestamp(6)
+  estado                 Boolean?             @default(true)
+  tipo_identificacion    tipo_identificacion? @relation(fields: [id_tipo_identificacion], references: [id_tipo_identificacion], onDelete: NoAction, onUpdate: NoAction)
+  clientes_vehiculos     clientes_vehiculos[]
+  facturas               Factura[]
+  pagos_maestro          pagos_maestro[]
+
+  @@map("clientes")
+}
+
+model Vehiculo {
+  id                 Int                  @id @default(autoincrement()) @map("id_vehiculo")
+  chasis             String               @unique @db.VarChar(50)
+  marca              String               @db.VarChar(50)
+  modelo             String               @db.VarChar(50)
+  color              String?              @db.VarChar(30)
+  anio               Int?                 @map("anio")
+  placa              String?              @unique @db.VarChar(20)
+  estado             Boolean?             @default(true)
+  clientes_vehiculos clientes_vehiculos[]
+  diagnosticos       Diagnostico[]
+
+  @@map("vehiculos")
+}
+
+model OrdenTrabajo {
+  id             Int          @id @default(autoincrement()) @map("id_ot")
+  id_diagnostico Int?
+  mecanicoId     Int?         @map("id_mecanico")
+  fecha_creacion DateTime?    @default(now()) @db.Timestamp(6)
+  fechaCierre    DateTime?    @map("fecha_cierre") @db.Timestamp(6)
+  estatus        String?      @default("En Proceso") @db.VarChar(20)
+  estado         Boolean?     @default(true)
+  facturas       Factura?
+  diagnosticos   Diagnostico? @relation(fields: [id_diagnostico], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  mecanico       Usuario?     @relation("MecanicoAsignado", fields: [mecanicoId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+
+  @@map("ordenes_trabajo")
+}
+
+model Diagnostico {
+  id                               Int                                @id @default(autoincrement()) @map("id_diagnostico")
+  id_vehiculo                      Int?
+  presionBaja                      Decimal?                           @map("presion_baja") @db.Decimal(5, 2)
+  presionAlta                      Decimal?                           @map("presion_alta") @db.Decimal(5, 2)
+  temperatura                      Decimal?                           @db.Decimal(5, 2)
+  fallaDetectada                   String                             @map("falla_detectada")
+  fecha                            DateTime?                          @default(now()) @db.Timestamp(6)
+  estatus                          String?                            @default("Pendiente") @db.VarChar(20)
+  estado                           Boolean?                           @default(true)
+  asignacion_mecanicos_diagnostico asignacion_mecanicos_diagnostico[]
+  vehiculos                        Vehiculo?                          @relation(fields: [id_vehiculo], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  factura_diagnostico_puente       factura_diagnostico_puente[]
+  ordenes_trabajo                  OrdenTrabajo[]
+
+  @@map("diagnosticos")
+}
+
+model Factura {
+  id                         Int                          @id @default(autoincrement()) @map("id_factura")
+  otId                       Int?                         @unique @map("id_ot")
+  id_cliente                 Int?
+  fecha                      DateTime?                    @default(now()) @db.Timestamp(6)
+  subtotal                   Decimal                      @default(0.00) @db.Decimal(10, 2)
+  total_impuestos            Decimal                      @default(0.00) @db.Decimal(10, 2)
+  total                      Decimal                      @default(0.00) @db.Decimal(10, 2)
+  estatus                    String?                      @default("Pendiente") @db.VarChar(20)
+  estado                     Boolean?                     @default(true)
+  cuentas_por_cobrar         cuentas_por_cobrar[]
+  factura_detalles           factura_detalles[]
+  factura_diagnostico_puente factura_diagnostico_puente[]
+  clientes                   Cliente?                     @relation(fields: [id_cliente], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  ordenTrabajo               OrdenTrabajo?                @relation(fields: [otId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+
+  @@map("facturas")
+}
+
+/// This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.
+model asignacion_mecanicos_diagnostico {
+  id_asignacion    Int          @id @default(autoincrement())
+  id_diagnostico   Int?
+  id_mecanico      Int?
+  fecha_asignacion DateTime?    @default(now()) @db.Timestamp(6)
+  estado           Boolean?     @default(true)
+  diagnosticos     Diagnostico? @relation(fields: [id_diagnostico], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  usuarios         Usuario?     @relation(fields: [id_mecanico], references: [id], onDelete: NoAction, onUpdate: NoAction)
+}
+
+/// This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.
+model clientes_vehiculos {
+  id_cliente  Int
+  id_vehiculo Int
+  clientes    Cliente  @relation(fields: [id_cliente], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  vehiculos   Vehiculo @relation(fields: [id_vehiculo], references: [id], onDelete: NoAction, onUpdate: NoAction)
+
+  @@id([id_cliente, id_vehiculo])
+}
+
+/// This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.
+model cuentas_por_cobrar {
+  id_cxc          Int             @id @default(autoincrement())
+  id_factura      Int?
+  monto_total     Decimal         @db.Decimal(10, 2)
+  monto_pagado    Decimal?        @default(0.00) @db.Decimal(10, 2)
+  monto_pendiente Decimal         @db.Decimal(10, 2)
+  estatus         String?         @default("Vigente") @db.VarChar(20)
+  estado          Boolean?        @default(true)
+  facturas        Factura?        @relation(fields: [id_factura], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  pagos_detalle   pagos_detalle[]
+}
+
+/// This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.
+model factura_detalles {
+  id_detalle           Int                   @id @default(autoincrement())
+  id_factura           Int?
+  id_material          Int?
+  cantidad             Int
+  precio_unitario      Decimal               @db.Decimal(10, 2)
+  valor_impuesto       Decimal               @db.Decimal(10, 2)
+  subtotal_item        Decimal               @db.Decimal(10, 2)
+  estado               Boolean?              @default(true)
+  facturas             Factura?              @relation(fields: [id_factura], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  materiales_repuestos materiales_repuestos? @relation(fields: [id_material], references: [id_material], onDelete: NoAction, onUpdate: NoAction)
+}
+
+/// This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.
+model factura_diagnostico_puente {
+  id_factura     Int
+  id_diagnostico Int
+  diagnosticos   Diagnostico @relation(fields: [id_diagnostico], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  facturas       Factura     @relation(fields: [id_factura], references: [id], onDelete: NoAction, onUpdate: NoAction)
+
+  @@id([id_factura, id_diagnostico])
+}
+
+/// This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.
+model impuestos {
+  id_impuesto          Int                    @id @default(autoincrement())
+  nombre               String                 @db.VarChar(50)
+  porcentaje           Decimal                @db.Decimal(5, 2)
+  estado               Boolean?               @default(true)
+  materiales_repuestos materiales_repuestos[]
+}
+
+/// This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.
+model materiales_repuestos {
+  id_material      Int                @id @default(autoincrement())
+  nombre           String             @db.VarChar(100)
+  precio_unitario  Decimal            @db.Decimal(10, 2)
+  id_impuesto      Int?
+  stock            Int                @default(0)
+  estatus          String?            @default("Disponible") @db.VarChar(20)
+  estado           Boolean?           @default(true)
+  factura_detalles factura_detalles[]
+  impuestos        impuestos?         @relation(fields: [id_impuesto], references: [id_impuesto], onDelete: NoAction, onUpdate: NoAction)
+}
+
+/// This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.
+model pagos_detalle {
+  id_pago_detalle    Int                 @id @default(autoincrement())
+  id_pago_maestro    Int?
+  id_cxc             Int?
+  monto_abonado      Decimal             @db.Decimal(10, 2)
+  estado             Boolean?            @default(true)
+  cuentas_por_cobrar cuentas_por_cobrar? @relation(fields: [id_cxc], references: [id_cxc], onDelete: NoAction, onUpdate: NoAction)
+  pagos_maestro      pagos_maestro?      @relation(fields: [id_pago_maestro], references: [id_pago_maestro], onDelete: NoAction, onUpdate: NoAction)
+}
+
+/// This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.
+model pagos_maestro {
+  id_pago_maestro      Int             @id @default(autoincrement())
+  id_cliente           Int?
+  fecha_pago           DateTime?       @default(now()) @db.Timestamp(6)
+  forma_pago           String          @db.VarChar(50)
+  monto_total_recibido Decimal         @db.Decimal(10, 2)
+  estado               Boolean?        @default(true)
+  pagos_detalle        pagos_detalle[]
+  clientes             Cliente?        @relation(fields: [id_cliente], references: [id], onDelete: NoAction, onUpdate: NoAction)
+}
+
+/// This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.
+model tipo_identificacion {
+  id_tipo_identificacion Int       @id @default(autoincrement())
+  nombre                 String    @db.VarChar(50)
+  estado                 Boolean?  @default(true)
+  clientes               Cliente[]
+}
