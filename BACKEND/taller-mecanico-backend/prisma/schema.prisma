@@ -1,26 +1,3 @@
-// ============================================================================
-// Prisma Schema - Sistema de Gestion de Taller Mecanico
-//
-// NOTA DE VERSION: el proyecto fija "prisma" y "@prisma/client" en 6.19.2
-// (ver package.json) a proposito. Desde Prisma ORM v7 (nov. 2025), los campos
-// "url" y "directUrl" del bloque datasource fueron RETIRADOS del schema y
-// movidos a un archivo aparte "prisma.config.ts". Mientras se siga usando
-// Prisma 6.x, la configuracion de conexion se mantiene aqui mismo, tal como
-// esta abajo, y sigue siendo la forma recomendada por Supabase para el patron
-// pooler (url) + conexion directa (directUrl).
-//
-// IMPORTANTE: la base de datos en Supabase YA EXISTE. Este archivo es una
-// PROPUESTA inicial derivada del SRS (seccion 7, extendida a 3FN).
-//
-// Antes de usarlo en runtime, sincronizalo con la base real:
-//   npx prisma db pull        -> trae el esquema REAL de Supabase y sobrescribe
-//                                 este archivo (recomendado si la BD ya tiene datos)
-//   npx prisma generate       -> genera el cliente a partir del schema resultante
-//
-// Si en cambio la base esta vacia y quieres partir de este diseño:
-//   npx prisma migrate dev --name init
-// ============================================================================
-
 generator client {
   provider = "prisma-client-js"
 }
@@ -31,234 +8,221 @@ datasource db {
   directUrl = env("DIRECT_URL")
 }
 
-// ---------------------------------------------------------------------------
-// Catalogos / soporte multi-sucursal (RNF: soporte multi-sucursal)
-// ---------------------------------------------------------------------------
-
-model Sucursal {
-  id        Int       @id @default(autoincrement()) @map("id_sucursal")
-  nombre    String
-  direccion String?
-  telefono  String?
-  activo    Boolean   @default(true)
-  usuarios  Usuario[]
-  ordenes   OrdenTrabajo[]
-  createdAt DateTime  @default(now()) @map("created_at")
-
-  @@map("sucursales")
-}
-
 model Rol {
   id       Int       @id @default(autoincrement()) @map("id_rol")
-  nombre   String    @unique // recepcionista | mecanico | supervisor | administrador
+  nombre   String    @db.VarChar(50)
+  estado   Boolean?  @default(true)
   usuarios Usuario[]
 
   @@map("roles")
 }
 
-// ---------------------------------------------------------------------------
-// RF-08 Gestion de Usuarios
-// ---------------------------------------------------------------------------
-
 model Usuario {
-  id           Int      @id @default(autoincrement()) @map("id_usuario")
-  nombre       String
-  email        String   @unique
-  passwordHash String   @map("password_hash")
-  rolId        Int      @map("id_rol")
-  sucursalId   Int?     @map("id_sucursal")
-  activo       Boolean  @default(true)
-  createdAt    DateTime @default(now()) @map("created_at")
-  updatedAt    DateTime @updatedAt @map("updated_at")
-
-  rol               Rol            @relation(fields: [rolId], references: [id])
-  sucursal          Sucursal?      @relation(fields: [sucursalId], references: [id])
-  ordenesAsignadas  OrdenTrabajo[] @relation("MecanicoAsignado")
+  id                               Int                                @id @default(autoincrement()) @map("id_usuario")
+  rolId                            Int?                               @map("id_rol")
+  nombre                           String                             @db.VarChar(100)
+  email                            String                             @unique @db.VarChar(100)
+  contrasena_hash                  String                             @db.VarChar(255)
+  estado                           Boolean?                           @default(true)
+  asignacion_mecanicos_diagnostico asignacion_mecanicos_diagnostico[]
+  ordenesAsignadas                 OrdenTrabajo[]                     @relation("MecanicoAsignado")
+  rol                              Rol?                               @relation(fields: [rolId], references: [id], onDelete: NoAction, onUpdate: NoAction)
 
   @@map("usuarios")
 }
 
-// ---------------------------------------------------------------------------
-// RF-01 Gestion de Clientes
-// ---------------------------------------------------------------------------
-
 model Cliente {
-  id                 Int      @id @default(autoincrement()) @map("id_cliente")
-  tipoCliente        String   @map("tipo_cliente") // natural | juridico
-  tipoIdentificacion String   @map("tipo_identificacion") // cedula | RNC | pasaporte
-  identificacion     String   @unique
-  nombre             String
-  telefono           String?
-  direccion          String?
-  email              String?  @unique
-  createdAt          DateTime @default(now()) @map("created_at")
-  updatedAt          DateTime @updatedAt @map("updated_at")
-
-  vehiculos      Vehiculo[]
-  ordenesTrabajo OrdenTrabajo[]
-  citas          Cita[]
+  id                     Int                  @id @default(autoincrement()) @map("id_cliente")
+  id_tipo_identificacion Int?
+  identificacion         String               @unique @db.VarChar(20)
+  nombre                 String               @db.VarChar(100)
+  telefono               String?              @db.VarChar(20)
+  direccion              String?
+  email                  String?              @db.VarChar(100)
+  fecha_creacion         DateTime?            @default(now()) @db.Timestamp(6)
+  estado                 Boolean?             @default(true)
+  tipo_identificacion    tipo_identificacion? @relation(fields: [id_tipo_identificacion], references: [id_tipo_identificacion], onDelete: NoAction, onUpdate: NoAction)
+  clientes_vehiculos     clientes_vehiculos[]
+  facturas               Factura[]
+  pagos_maestro          pagos_maestro[]
 
   @@map("clientes")
 }
 
-// ---------------------------------------------------------------------------
-// RF-02 Gestion de Vehiculos (cada vehiculo pertenece a un cliente)
-// ---------------------------------------------------------------------------
-
 model Vehiculo {
-  id         Int      @id @default(autoincrement()) @map("id_vehiculo")
-  clienteId  Int      @map("id_cliente")
-  chasis     String   @unique
-  marca      String
-  modelo     String
-  color      String?
-  anio       Int      @map("anio")
-  placa      String   @unique
-  createdAt  DateTime @default(now()) @map("created_at")
-  updatedAt  DateTime @updatedAt @map("updated_at")
-
-  cliente        Cliente        @relation(fields: [clienteId], references: [id])
-  ordenesTrabajo OrdenTrabajo[]
-  citas          Cita[]
+  id                 Int                  @id @default(autoincrement()) @map("id_vehiculo")
+  chasis             String               @unique @db.VarChar(50)
+  marca              String               @db.VarChar(50)
+  modelo             String               @db.VarChar(50)
+  color              String?              @db.VarChar(30)
+  anio               Int?                 @map("anio")
+  placa              String?              @unique @db.VarChar(20)
+  estado             Boolean?             @default(true)
+  clientes_vehiculos clientes_vehiculos[]
+  diagnosticos       Diagnostico[]
 
   @@map("vehiculos")
 }
 
-// ---------------------------------------------------------------------------
-// RF-03 Ordenes de Trabajo / RF-04 Diagnostico / RF-10 Historial
-// ---------------------------------------------------------------------------
-
-enum EstadoOrden {
-  ABIERTA
-  EN_DIAGNOSTICO
-  EN_REPARACION
-  ESPERANDO_REPUESTOS
-  FINALIZADA
-  CERRADA
-  CANCELADA
-}
-
 model OrdenTrabajo {
-  id                Int         @id @default(autoincrement()) @map("id_ot")
-  clienteId         Int         @map("id_cliente")
-  vehiculoId        Int         @map("id_vehiculo")
-  mecanicoId        Int?        @map("id_mecanico")
-  sucursalId        Int?        @map("id_sucursal")
-  problemaReportado String      @map("problema_reportado")
-  estado            EstadoOrden @default(ABIERTA)
-  fecha             DateTime    @default(now())
-  fechaCierre       DateTime?   @map("fecha_cierre")
-  createdAt         DateTime    @default(now()) @map("created_at")
-  updatedAt         DateTime    @updatedAt @map("updated_at")
-
-  cliente      Cliente       @relation(fields: [clienteId], references: [id])
-  vehiculo     Vehiculo      @relation(fields: [vehiculoId], references: [id])
-  mecanico     Usuario?      @relation("MecanicoAsignado", fields: [mecanicoId], references: [id])
-  sucursal     Sucursal?     @relation(fields: [sucursalId], references: [id])
-  diagnosticos Diagnostico[]
-  facturas     Factura[]
+  id             Int          @id @default(autoincrement()) @map("id_ot")
+  id_diagnostico Int?
+  mecanicoId     Int?         @map("id_mecanico")
+  fecha_creacion DateTime?    @default(now()) @db.Timestamp(6)
+  fechaCierre    DateTime?    @map("fecha_cierre") @db.Timestamp(6)
+  estatus        String?      @default("En Proceso") @db.VarChar(20)
+  estado         Boolean?     @default(true)
+  facturas       Factura?
+  diagnosticos   Diagnostico? @relation(fields: [id_diagnostico], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  mecanico       Usuario?     @relation("MecanicoAsignado", fields: [mecanicoId], references: [id], onDelete: NoAction, onUpdate: NoAction)
 
   @@map("ordenes_trabajo")
 }
 
 model Diagnostico {
-  id             Int      @id @default(autoincrement()) @map("id_diagnostico")
-  otId           Int      @map("id_ot")
-  presionBaja    Decimal? @map("presion_baja") @db.Decimal(6, 2)
-  presionAlta    Decimal? @map("presion_alta") @db.Decimal(6, 2)
-  temperatura    Decimal? @db.Decimal(6, 2)
-  fallaDetectada String   @map("falla_detectada")
-  createdAt      DateTime @default(now()) @map("created_at")
-
-  ordenTrabajo OrdenTrabajo @relation(fields: [otId], references: [id])
+  id                               Int                                @id @default(autoincrement()) @map("id_diagnostico")
+  id_vehiculo                      Int?
+  presionBaja                      Decimal?                           @map("presion_baja") @db.Decimal(5, 2)
+  presionAlta                      Decimal?                           @map("presion_alta") @db.Decimal(5, 2)
+  temperatura                      Decimal?                           @db.Decimal(5, 2)
+  fallaDetectada                   String                             @map("falla_detectada")
+  fecha                            DateTime?                          @default(now()) @db.Timestamp(6)
+  estatus                          String?                            @default("Pendiente") @db.VarChar(20)
+  estado                           Boolean?                           @default(true)
+  asignacion_mecanicos_diagnostico asignacion_mecanicos_diagnostico[]
+  vehiculos                        Vehiculo?                          @relation(fields: [id_vehiculo], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  factura_diagnostico_puente       factura_diagnostico_puente[]
+  ordenes_trabajo                  OrdenTrabajo[]
 
   @@map("diagnosticos")
 }
 
-// ---------------------------------------------------------------------------
-// RF-05 Inventario
-// ---------------------------------------------------------------------------
-
-model Material {
-  id             Int      @id @default(autoincrement()) @map("id_material")
-  nombre         String
-  descripcion    String?
-  precioUnitario Decimal  @map("precio_unitario") @db.Decimal(10, 2)
-  stock          Int      @default(0)
-  stockMinimo    Int      @default(0) @map("stock_minimo")
-  createdAt      DateTime @default(now()) @map("created_at")
-  updatedAt      DateTime @updatedAt @map("updated_at")
-
-  detalleFacturas DetalleFactura[]
-
-  @@map("materiales")
-}
-
-// ---------------------------------------------------------------------------
-// RF-06 Facturacion (maestro-detalle)
-// ---------------------------------------------------------------------------
-
-enum EstadoPago {
-  PENDIENTE
-  PARCIAL
-  PAGADA
-}
-
 model Factura {
-  id          Int        @id @default(autoincrement()) @map("id_factura")
-  otId        Int        @map("id_ot")
-  fecha       DateTime   @default(now())
-  formaPago   String     @map("forma_pago")
-  subtotal    Decimal    @db.Decimal(10, 2)
-  impuesto    Decimal    @db.Decimal(10, 2)
-  total       Decimal    @db.Decimal(10, 2)
-  estadoPago  EstadoPago @default(PENDIENTE) @map("estado_pago")
-  createdAt   DateTime   @default(now()) @map("created_at")
-
-  ordenTrabajo OrdenTrabajo     @relation(fields: [otId], references: [id])
-  detalles     DetalleFactura[]
+  id                         Int                          @id @default(autoincrement()) @map("id_factura")
+  otId                       Int?                         @unique @map("id_ot")
+  id_cliente                 Int?
+  fecha                      DateTime?                    @default(now()) @db.Timestamp(6)
+  subtotal                   Decimal                      @default(0.00) @db.Decimal(10, 2)
+  total_impuestos            Decimal                      @default(0.00) @db.Decimal(10, 2)
+  total                      Decimal                      @default(0.00) @db.Decimal(10, 2)
+  estatus                    String?                      @default("Pendiente") @db.VarChar(20)
+  estado                     Boolean?                     @default(true)
+  cuentas_por_cobrar         cuentas_por_cobrar[]
+  factura_detalles           factura_detalles[]
+  factura_diagnostico_puente factura_diagnostico_puente[]
+  clientes                   Cliente?                     @relation(fields: [id_cliente], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  ordenTrabajo               OrdenTrabajo?                @relation(fields: [otId], references: [id], onDelete: NoAction, onUpdate: NoAction)
 
   @@map("facturas")
 }
 
-model DetalleFactura {
-  id             Int     @id @default(autoincrement()) @map("id_detalle")
-  facturaId      Int     @map("id_factura")
-  materialId     Int?    @map("id_material")
-  descripcion    String
-  cantidad       Int
-  precioUnitario Decimal @map("precio_unitario") @db.Decimal(10, 2)
-  total          Decimal @db.Decimal(10, 2)
-
-  factura  Factura   @relation(fields: [facturaId], references: [id])
-  material Material? @relation(fields: [materialId], references: [id])
-
-  @@map("detalle_facturas")
+/// This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.
+model asignacion_mecanicos_diagnostico {
+  id_asignacion    Int          @id @default(autoincrement())
+  id_diagnostico   Int?
+  id_mecanico      Int?
+  fecha_asignacion DateTime?    @default(now()) @db.Timestamp(6)
+  estado           Boolean?     @default(true)
+  diagnosticos     Diagnostico? @relation(fields: [id_diagnostico], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  usuarios         Usuario?     @relation(fields: [id_mecanico], references: [id], onDelete: NoAction, onUpdate: NoAction)
 }
 
-// ---------------------------------------------------------------------------
-// RF-07 Agenda de Citas
-// ---------------------------------------------------------------------------
+/// This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.
+model clientes_vehiculos {
+  id_cliente  Int
+  id_vehiculo Int
+  clientes    Cliente  @relation(fields: [id_cliente], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  vehiculos   Vehiculo @relation(fields: [id_vehiculo], references: [id], onDelete: NoAction, onUpdate: NoAction)
 
-enum EstadoCita {
-  PROGRAMADA
-  CONFIRMADA
-  CANCELADA
-  COMPLETADA
+  @@id([id_cliente, id_vehiculo])
 }
 
-model Cita {
-  id         Int        @id @default(autoincrement()) @map("id_cita")
-  clienteId  Int        @map("id_cliente")
-  vehiculoId Int?       @map("id_vehiculo")
-  fechaHora  DateTime   @map("fecha_hora")
-  motivo     String?
-  estado     EstadoCita @default(PROGRAMADA)
-  createdAt  DateTime   @default(now()) @map("created_at")
-  updatedAt  DateTime   @updatedAt @map("updated_at")
+/// This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.
+model cuentas_por_cobrar {
+  id_cxc          Int             @id @default(autoincrement())
+  id_factura      Int?
+  monto_total     Decimal         @db.Decimal(10, 2)
+  monto_pagado    Decimal?        @default(0.00) @db.Decimal(10, 2)
+  monto_pendiente Decimal         @db.Decimal(10, 2)
+  estatus         String?         @default("Vigente") @db.VarChar(20)
+  estado          Boolean?        @default(true)
+  facturas        Factura?        @relation(fields: [id_factura], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  pagos_detalle   pagos_detalle[]
+}
 
-  cliente  Cliente   @relation(fields: [clienteId], references: [id])
-  vehiculo Vehiculo? @relation(fields: [vehiculoId], references: [id])
+/// This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.
+model factura_detalles {
+  id_detalle           Int                   @id @default(autoincrement())
+  id_factura           Int?
+  id_material          Int?
+  cantidad             Int
+  precio_unitario      Decimal               @db.Decimal(10, 2)
+  valor_impuesto       Decimal               @db.Decimal(10, 2)
+  subtotal_item        Decimal               @db.Decimal(10, 2)
+  estado               Boolean?              @default(true)
+  facturas             Factura?              @relation(fields: [id_factura], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  materiales_repuestos materiales_repuestos? @relation(fields: [id_material], references: [id_material], onDelete: NoAction, onUpdate: NoAction)
+}
 
-  @@map("citas")
+/// This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.
+model factura_diagnostico_puente {
+  id_factura     Int
+  id_diagnostico Int
+  diagnosticos   Diagnostico @relation(fields: [id_diagnostico], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  facturas       Factura     @relation(fields: [id_factura], references: [id], onDelete: NoAction, onUpdate: NoAction)
+
+  @@id([id_factura, id_diagnostico])
+}
+
+/// This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.
+model impuestos {
+  id_impuesto          Int                    @id @default(autoincrement())
+  nombre               String                 @db.VarChar(50)
+  porcentaje           Decimal                @db.Decimal(5, 2)
+  estado               Boolean?               @default(true)
+  materiales_repuestos materiales_repuestos[]
+}
+
+/// This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.
+model materiales_repuestos {
+  id_material      Int                @id @default(autoincrement())
+  nombre           String             @db.VarChar(100)
+  precio_unitario  Decimal            @db.Decimal(10, 2)
+  id_impuesto      Int?
+  stock            Int                @default(0)
+  estatus          String?            @default("Disponible") @db.VarChar(20)
+  estado           Boolean?           @default(true)
+  factura_detalles factura_detalles[]
+  impuestos        impuestos?         @relation(fields: [id_impuesto], references: [id_impuesto], onDelete: NoAction, onUpdate: NoAction)
+}
+
+/// This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.
+model pagos_detalle {
+  id_pago_detalle    Int                 @id @default(autoincrement())
+  id_pago_maestro    Int?
+  id_cxc             Int?
+  monto_abonado      Decimal             @db.Decimal(10, 2)
+  estado             Boolean?            @default(true)
+  cuentas_por_cobrar cuentas_por_cobrar? @relation(fields: [id_cxc], references: [id_cxc], onDelete: NoAction, onUpdate: NoAction)
+  pagos_maestro      pagos_maestro?      @relation(fields: [id_pago_maestro], references: [id_pago_maestro], onDelete: NoAction, onUpdate: NoAction)
+}
+
+/// This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.
+model pagos_maestro {
+  id_pago_maestro      Int             @id @default(autoincrement())
+  id_cliente           Int?
+  fecha_pago           DateTime?       @default(now()) @db.Timestamp(6)
+  forma_pago           String          @db.VarChar(50)
+  monto_total_recibido Decimal         @db.Decimal(10, 2)
+  estado               Boolean?        @default(true)
+  pagos_detalle        pagos_detalle[]
+  clientes             Cliente?        @relation(fields: [id_cliente], references: [id], onDelete: NoAction, onUpdate: NoAction)
+}
+
+/// This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.
+model tipo_identificacion {
+  id_tipo_identificacion Int       @id @default(autoincrement())
+  nombre                 String    @db.VarChar(50)
+  estado                 Boolean?  @default(true)
+  clientes               Cliente[]
 }
