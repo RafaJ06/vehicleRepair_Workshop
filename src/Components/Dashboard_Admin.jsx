@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import {AdminHeader} from '../Components/Header';
-import{URL} from '../App';
+import { AdminHeader } from '../Components/Header'; // Asegúrate de usar la importación con llaves si cambiaste a Named Exports
+import { URL } from '../App';
 import { 
   Wrench, 
   Car, 
@@ -10,10 +10,10 @@ import {
   TrendingUp, 
   Shield, 
   UserCog, 
-  ChevronRight 
+  ChevronRight,
+  ChevronLeft
 } from 'lucide-react';
 import '../Style/Dashboard_Admin.css';
-
 
 const Dashboard_Admin = () => {
 
@@ -27,8 +27,13 @@ const Dashboard_Admin = () => {
     ticketPromedio: 0,
     usuariosActivos: 0
   });
-
   const [loading, setLoading] = useState(true);
+
+  const [usuariosLista, setUsuariosLista] = useState([]);
+  const [loadingLista, setLoadingLista] = useState(false);
+  const [page, setPage] = useState(1);
+  const [totalPages, setTotalPages] = useState(1);
+  const limit = 5; 
 
   const formatCurrency = (amount) => {
     return new Intl.NumberFormat('es-DO', { 
@@ -38,23 +43,22 @@ const Dashboard_Admin = () => {
     }).format(amount);
   };
 
+  const getAuthHeaders = () => {
+    const token = localStorage.getItem('token');
+    return {
+      'Content-Type': 'application/json',
+      'Authorization': `Bearer ${token}` 
+    };
+  };
+
   useEffect(() => {
     const fetchDashboardData = async () => {
       try {
         setLoading(true);
+        const config = { headers: getAuthHeaders() };
 
-        const token = localStorage.getItem('token');
-        const config = {
-          headers: {
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${token}` 
-          }
-        };
-
-       
         const resOrdenes = await fetch(`${URL}/api/reportes/ordenes-por-estado`, config);
         const ordenesPorEstado = await resOrdenes.json();
-        
         const ordenesArray = Array.isArray(ordenesPorEstado) ? ordenesPorEstado : [];
         
         const activas = ordenesArray
@@ -71,24 +75,27 @@ const Dashboard_Admin = () => {
         const resStock = await fetch(`${URL}/api/reportes/inventario-bajo-stock`, config);
         const stockData = await resStock.json();
         const alertasStock = Array.isArray(stockData) ? stockData.length : 0;
+
         const resClientes = await fetch(`${URL}/api/clientes?limit=1`, config);
         const clientesData = await resClientes.json();
         const totalClientes = clientesData.total || 0;
+
         const resFinanzas = await fetch(`${URL}/api/reportes/facturacion`, config);
         const finanzasData = await resFinanzas.json();
         const facturacionTotal = finanzasData.totalFacturado || 0;
         const ticketPromedio = finanzasData.cantidadFacturas > 0 
           ? facturacionTotal / finanzasData.cantidadFacturas 
           : 0;
+
         const resUsuarios = await fetch(`${URL}/api/usuarios`, config);
         const usuariosData = await resUsuarios.json();
         const usuariosActivos = Array.isArray(usuariosData) 
-          ? usuariosData.filter(u => u.activo).length 
+          ? usuariosData.filter(u => u.activo || u.estado).length 
           : 0;
 
         setDashboardData({
           ordenesActivas: activas,
-          enTaller: enTaller,
+          enTaller,
           listosEntrega: listos,
           alertasStock,
           totalClientes,
@@ -106,6 +113,37 @@ const Dashboard_Admin = () => {
 
     fetchDashboardData();
   }, []);
+
+  useEffect(() => {
+    const fetchPaginatedData = async () => {
+      try {
+        setLoadingLista(true);
+        const res = await fetch(`${URL}/api/usuarios?page=${page}&limit=${limit}`, { 
+          headers: getAuthHeaders() 
+        });
+        const data = await res.json();
+
+   
+        if (data.data && data.totalPages !== undefined) {
+          setUsuariosLista(data.data);
+          setTotalPages(data.totalPages);
+        } 
+
+        else if (Array.isArray(data)) {
+          const startIndex = (page - 1) * limit;
+          const paginatedItems = data.slice(startIndex, startIndex + limit);
+          setUsuariosLista(paginatedItems);
+          setTotalPages(Math.ceil(data.length / limit));
+        }
+      } catch (error) {
+        console.error("Error al cargar la lista paginada:", error);
+      } finally {
+        setLoadingLista(false);
+      }
+    };
+
+    fetchPaginatedData();
+  }, [page]); 
 
   return (
     <div className="admin-container">
@@ -237,13 +275,45 @@ const Dashboard_Admin = () => {
                 </span>
               </div>
 
-              <button className="access-action-btn">
-                <div className="btn-left">
-                  <UserCog size={16} className="btn-icon" />
-                  <span>GESTIONAR EMPLEADOS</span>
+              <div style={{ marginTop: '1.5rem', backgroundColor: '#111622', padding: '1rem', borderRadius: '4px', border: '1px solid #1f2937' }}>
+                <span style={{ fontSize: '0.75rem', fontWeight: '800', color: '#d1d5db', letterSpacing: '0.05em' }}>REGISTRO DE USUARIOS</span>
+                
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem', marginTop: '1rem', minHeight: '180px' }}>
+                  {loadingLista ? (
+                    <span style={{ fontSize: '0.8rem', color: '#9ca3af' }}>Cargando página {page}...</span>
+                  ) : (
+                    usuariosLista.map(u => (
+                      <div key={u.id} style={{ display: 'flex', justifyContent: 'space-between', padding: '0.5rem', borderBottom: '1px solid #1f2937' }}>
+                        <span style={{ fontSize: '0.8rem', color: '#fff' }}>{u.nombre}</span>
+                        <span style={{ fontSize: '0.7rem', color: '#9ca3af', textTransform: 'uppercase' }}>{u.rol?.nombre || 'Usuario'}</span>
+                      </div>
+                    ))
+                  )}
                 </div>
-                <ChevronRight size={16} className="btn-chevron" />
-              </button>
+
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '1.5rem' }}>
+                  <button 
+                    onClick={() => setPage(p => Math.max(p - 1, 1))}
+                    disabled={page === 1}
+                    style={{ background: 'transparent', border: '1px solid #374151', color: page === 1 ? '#4b5563' : '#fff', padding: '0.5rem', borderRadius: '4px', cursor: page === 1 ? 'not-allowed' : 'pointer', display: 'flex', alignItems: 'center' }}
+                  >
+                    <ChevronLeft size={16} />
+                  </button>
+
+                  <span style={{ fontSize: '0.7rem', fontWeight: '700', color: '#9ca3af', letterSpacing: '0.1em' }}>
+                    PÁGINA {page} DE {totalPages || 1}
+                  </span>
+
+                  <button 
+                    onClick={() => setPage(p => Math.min(p + 1, totalPages))}
+                    disabled={page === totalPages || totalPages === 0}
+                    style={{ background: 'transparent', border: '1px solid #374151', color: (page === totalPages || totalPages === 0) ? '#4b5563' : '#fff', padding: '0.5rem', borderRadius: '4px', cursor: (page === totalPages || totalPages === 0) ? 'not-allowed' : 'pointer', display: 'flex', alignItems: 'center' }}
+                  >
+                    <ChevronRight size={16} />
+                  </button>
+                </div>
+              </div>
+
             </div>
           </section>
 

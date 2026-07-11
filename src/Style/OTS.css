@@ -1,0 +1,168 @@
+
+.ot-container {
+  position: absolute;
+  top: 0;
+  left: 0;
+  min-height: 100vh;
+  width: 100%;
+  background-color: #000000;
+  color: #ffffff;
+  display: flex;
+  flex-direction: column;
+  overflow-x: hidden;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+}
+
+.ot-main {
+  padding: 3rem 6%;
+  flex-grow: 1;
+}
+
+.ot-page-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 2.5rem;
+  padding-bottom: 1.5rem;
+  border-bottom: 1px solid #111111; 
+}
+
+.ot-page-title {
+  font-size: 1.5rem;
+  font-weight: 800;
+  color: #ffffff;
+  letter-spacing: 0.02em;
+  margin: 0;
+}
+
+.btn-create-ot {
+  background-color: #e50000;
+  color: #ffffff;
+  border: none;
+  padding: 0.75rem 1.25rem;
+  font-size: 0.8rem;
+  font-weight: 800;
+  letter-spacing: 0.05em;
+  border-radius: 2px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  transition: background-color 0.2s ease, transform 0.1s ease;
+}
+
+.btn-create-ot:hover {
+  background-color: #cc0000;
+}
+
+.btn-create-ot:active {
+  transform: scale(0.97);
+}
+
+.ot-table-wrapper {
+  background-color: transparent;
+  border: 1px solid #1f2937;
+  border-radius: 2px;
+  overflow-x: auto;
+}
+
+.ot-table {
+  width: 100%;
+  border-collapse: collapse;
+  text-align: left;
+}
+
+.ot-table th {
+  color: #dc2626; 
+  font-size: 0.75rem;
+  font-weight: 800;
+  padding: 1.25rem 1.5rem;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  border-bottom: 1px solid #dc2626; 
+  background-color: #0f1522; 
+}
+
+
+.ot-table td {
+  padding: 1.25rem 1.5rem;
+  border-bottom: 1px solid #1f2937;
+  vertical-align: middle;
+}
+
+.ot-table tbody tr {
+  transition: background-color 0.2s ease;
+}
+
+.ot-table tbody tr:hover {
+  background-color: rgba(255, 255, 255, 0.02);
+}
+
+.ot-id-cell {
+  color: #ffffff;
+  font-weight: 800;
+  font-size: 0.95rem;
+  letter-spacing: 0.02em;
+}
+
+.ot-info-cell {
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+}
+
+.ot-vehicle {
+  color: #ffffff;
+  font-weight: 800;
+  font-size: 0.95rem;
+  letter-spacing: 0.02em;
+}
+
+.ot-client {
+  color: #6b7280; 
+  font-size: 0.8rem;
+  font-weight: 500;
+}
+
+.ot-status-badge {
+  display: inline-block;
+  padding: 0.4rem 0.75rem;
+  font-size: 0.7rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: #d1d5db;
+  background-color: transparent;
+  border: 1px solid #4b5563; 
+  border-radius: 2px;
+}
+
+.error-banner {
+  background-color: rgba(239, 68, 68, 0.1);
+  border: 1px solid #7f1d1d;
+  color: #ef4444;
+  padding: 1rem;
+  border-radius: 4px;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin-bottom: 1.5rem;
+  font-size: 0.85rem;
+  font-weight: 600;
+}
+
+.text-center { text-align: center; }
+.py-4 { padding-top: 2rem; padding-bottom: 2rem; }
+.text-gray { color: #9ca3af; }
+
+@media (max-width: 768px) {
+  .ot-main {
+    padding: 2rem 1.5rem;
+  }
+  
+  .ot-page-header {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 1rem;
+  }
+}

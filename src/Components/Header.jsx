@@ -113,7 +113,7 @@ export const AdminHeader = () => {
 
       <nav className="navbar-menu">
         <Link to="/admin" className={`nav-link ${isActive('/admin') ? 'active' : ''}`}>PANEL</Link>
-        <Link to="/admin/ots" className={`nav-link ${isActive('/admin/ots') ? 'active' : ''}`}>OTS</Link>
+        <Link to="/admin/OTS" className={`nav-link ${isActive('/admin/OTS') ? 'active' : ''}`}>OTS</Link>
         <Link to="/admin/inventario" className={`nav-link ${isActive('/admin/inventario') ? 'active' : ''}`}>INVENTARIO</Link>
         <Link to="/admin/clientes" className={`nav-link ${isActive('/admin/clientes') ? 'active' : ''}`}>CLIENTES</Link>
         <Link to="/admin/vehiculos" className={`nav-link ${isActive('/admin/vehiculos') ? 'active' : ''}`}>VEHÍCULOS</Link>
