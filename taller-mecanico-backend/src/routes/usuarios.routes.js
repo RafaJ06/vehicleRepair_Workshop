@@ -13,7 +13,7 @@ router.get('/', asyncHandler(ctrl.listar));
 
 router.patch(
   '/:id/estado',
-  [param('id').isInt(), body('activo').isBoolean()],
+  [param('id').isInt(), body('estado').isBoolean()],
   validate,
   asyncHandler(ctrl.cambiarEstado)
 );
