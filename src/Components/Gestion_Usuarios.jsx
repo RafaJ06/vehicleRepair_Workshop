@@ -1,20 +1,47 @@
 import React, { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { Users, Shield, CheckCircle, XCircle, AlertCircle } from 'lucide-react';
-import '../Style/Gestion_Usuarios';
-import {url} from "../App"
+import {AdminHeader} from './Header';
+import '../Style/Gestion_Usuarios.css';
+import {URL} from '../App';
 
 const Gestion_Usuarios = () => {
   const [users, setUsers] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+  
+  const navigate = useNavigate();
 
-  const availableRoles = ['Administrador', 'Recepcionista', 'Mecanico', 'Cliente'];
+  const availableRoles = ['administrador', 'supervisor', 'mecanico', 'recepcionista'];
+
+  const getAuthHeaders = () => {
+    const token = localStorage.getItem('token');
+    return {
+      'Content-Type': 'application/json',
+      'Authorization': `Bearer ${token}`
+    };
+  };
+
+  const handleAuthError = (status) => {
+    if (status === 401 || status === 403) {
+      localStorage.removeItem('token');
+      localStorage.removeItem('usuario');
+      navigate('/');
+      throw new Error('Sesión expirada o permisos insuficientes.');
+    }
+  };
 
   const fetchUsers = async () => {
     try {
       setLoading(true);
-      const response = await fetch(`${url}/api/usuarios`);
+      setError('');
+      const response = await fetch(`${URL}/api/usuarios`, {
+        headers: getAuthHeaders()
+      });
+      
+      handleAuthError(response.status);
       if (!response.ok) throw new Error('Error al obtener los usuarios');
+      
       const data = await response.json();
       setUsers(data);
     } catch (err) {
@@ -26,21 +53,23 @@ const Gestion_Usuarios = () => {
 
   useEffect(() => {
     fetchUsers();
+    
   }, []);
 
   const toggleUserStatus = async (id, currentStatus) => {
     try {
-      const response = await fetch(`/api/usuarios/${id}/estado`, {
+      const response = await fetch(`${URL}/api/usuarios/${id}/estado`, {
         method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
+        headers: getAuthHeaders(),
         body: JSON.stringify({ activo: !currentStatus }),
       });
       
+      handleAuthError(response.status);
       if (!response.ok) throw new Error('Error al cambiar el estado');
       
       const updatedUser = await response.json();
       
-      setUsers(users.map(u => (u.id === id ? { ...u, activo: updatedUser.activo } : u)));
+      setUsers(users.map(u => (u.id === id ? { ...u, estado: updatedUser.estado !== undefined ? updatedUser.estado : !currentStatus } : u)));
     } catch (err) {
       alert(err.message);
     }
@@ -48,16 +77,16 @@ const Gestion_Usuarios = () => {
 
   const handleRoleChange = async (id, newRoleName) => {
     try {
-      const response = await fetch(`/api/usuarios/${id}/rol`, {
+      const response = await fetch(`${URL}/api/usuarios/${id}/rol`, {
         method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
+        headers: getAuthHeaders(),
         body: JSON.stringify({ rolNombre: newRoleName }),
       });
 
+      handleAuthError(response.status);
       if (!response.ok) throw new Error('Error al actualizar el rol');
       
       const updatedUser = await response.json();
-      
       setUsers(users.map(u => (u.id === id ? { ...u, rol: updatedUser.rol } : u)));
     } catch (err) {
       alert(err.message);
@@ -67,6 +96,7 @@ const Gestion_Usuarios = () => {
 
   return (
     <div className="management-container">
+      <AdminHeader />
       
       <section className="management-hero">
         <div className="management-hero-content">
@@ -113,7 +143,8 @@ const Gestion_Usuarios = () => {
                 </tr>
               ) : (
                 users.map((user) => (
-                  <tr key={user.id} className={!user.activo ? 'row-inactive' : ''}>
+                  // CORRECCIÓN: Leemos user.estado en lugar de user.activo
+                  <tr key={user.id} className={!user.estado ? 'row-inactive' : ''}>
                     
                     <td>
                       <div className="user-info-cell">
@@ -123,7 +154,7 @@ const Gestion_Usuarios = () => {
                     </td>
                     <td>
                       <span className="branch-badge">
-                        {user.sucursal?.nombre || 'Sin Asignar'}
+                        {user.sucursal?.nombre || 'Central'}
                       </span>
                     </td>
 
@@ -134,7 +165,8 @@ const Gestion_Usuarios = () => {
                           className="role-select"
                           value={user.rol?.nombre || ''}
                           onChange={(e) => handleRoleChange(user.id, e.target.value)}
-                          disabled={!user.activo}
+                          disabled={!user.estado}
+                          style={{ textTransform: 'capitalize' }}
                         >
                           <option value="" disabled>Seleccionar Rol</option>
                           {availableRoles.map(role => (
@@ -145,17 +177,17 @@ const Gestion_Usuarios = () => {
                     </td>
 
                     <td>
-                      <span className={`status-badge ${user.activo ? 'badge-active' : 'badge-inactive'}`}>
-                        {user.activo ? 'ACTIVO' : 'INACTIVO'}
+                      <span className={`status-badge ${user.estado ? 'badge-active' : 'badge-inactive'}`}>
+                        {user.estado ? 'ACTIVO' : 'INACTIVO'}
                       </span>
                     </td>
 
                     <td>
                       <button 
-                        className={`btn-action ${user.activo ? 'btn-deactivate' : 'btn-activate'}`}
-                        onClick={() => toggleUserStatus(user.id, user.activo)}
+                        className={`btn-action ${user.estado ? 'btn-deactivate' : 'btn-activate'}`}
+                        onClick={() => toggleUserStatus(user.id, user.estado)}
                       >
-                        {user.activo ? (
+                        {user.estado ? (
                           <>
                             <XCircle size={16} />
                             <span>SUSPENDER</span>

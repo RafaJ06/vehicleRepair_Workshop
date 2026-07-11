@@ -1,4 +1,6 @@
 import React, { useState, useEffect } from 'react';
+import {AdminHeader} from '../Components/Header';
+import{URL} from '../App';
 import { 
   Wrench, 
   Car, 
@@ -11,7 +13,7 @@ import {
   ChevronRight 
 } from 'lucide-react';
 import '../Style/Dashboard_Admin.css';
-import {url} from '../App.jsx'
+
 
 const Dashboard_Admin = () => {
 
@@ -41,38 +43,48 @@ const Dashboard_Admin = () => {
       try {
         setLoading(true);
 
-        const resOrdenes = await fetch(`${url}/api/reportes/ordenes-por-estado`);
+        const token = localStorage.getItem('token');
+        const config = {
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${token}` 
+          }
+        };
+
+       
+        const resOrdenes = await fetch(`${URL}/api/reportes/ordenes-por-estado`, config);
         const ordenesPorEstado = await resOrdenes.json();
         
-        const activas = ordenesPorEstado
+        const ordenesArray = Array.isArray(ordenesPorEstado) ? ordenesPorEstado : [];
+        
+        const activas = ordenesArray
           .filter(o => !['CERRADA', 'CANCELADA'].includes(o.estado))
-          .reduce((acc, o) => acc + o.total, 0);
+          .reduce((acc, o) => acc + (o.total || 0), 0);
           
-        const enTaller = ordenesPorEstado
+        const enTaller = ordenesArray
           .filter(o => ['EN_DIAGNOSTICO', 'EN_REPARACION'].includes(o.estado))
-          .reduce((acc, o) => acc + o.total, 0);
+          .reduce((acc, o) => acc + (o.total || 0), 0);
 
-        const listos = ordenesPorEstado
+        const listos = ordenesArray
           .find(o => o.estado === 'LISTO' || o.estado === 'LISTO_PARA_ENTREGA')?.total || 0;
 
-        const resStock = await fetch(url +`${url}/api/reportes/inventario-bajo-stock`);
+        const resStock = await fetch(`${URL}/api/reportes/inventario-bajo-stock`, config);
         const stockData = await resStock.json();
-        const alertasStock = stockData.length;
-
-        const resClientes = await fetch(url +`${url}/api/clientes?limit=1`);
+        const alertasStock = Array.isArray(stockData) ? stockData.length : 0;
+        const resClientes = await fetch(`${URL}/api/clientes?limit=1`, config);
         const clientesData = await resClientes.json();
         const totalClientes = clientesData.total || 0;
-
-        const resFinanzas = await fetch(url +`${url}/api/reportes/facturacion`);
+        const resFinanzas = await fetch(`${URL}/api/reportes/facturacion`, config);
         const finanzasData = await resFinanzas.json();
         const facturacionTotal = finanzasData.totalFacturado || 0;
         const ticketPromedio = finanzasData.cantidadFacturas > 0 
           ? facturacionTotal / finanzasData.cantidadFacturas 
           : 0;
-
-        const resUsuarios = await fetch(url +`${url}/api/usuarios`);
+        const resUsuarios = await fetch(`${URL}/api/usuarios`, config);
         const usuariosData = await resUsuarios.json();
-        const usuariosActivos = usuariosData.filter(u => u.activo).length;
+        const usuariosActivos = Array.isArray(usuariosData) 
+          ? usuariosData.filter(u => u.activo).length 
+          : 0;
 
         setDashboardData({
           ordenesActivas: activas,
@@ -98,6 +110,7 @@ const Dashboard_Admin = () => {
   return (
     <div className="admin-container">
       
+      <AdminHeader />
       <section className="admin-hero">
         <div className="admin-hero-content">
           <h1 className="admin-hero-title">

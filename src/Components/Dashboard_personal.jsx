@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Activity, Car, AlertCircle } from 'lucide-react';
-import {url} from '../App.jsx'
 import '../Style/Dashboard_Personal.css';
+import {URL} from '../App';
 
 const Dashboard_Personal = () => {
   const [ordenes, setOrdenes] = useState([]);
@@ -13,7 +13,7 @@ const Dashboard_Personal = () => {
     const fetchOrdenes = async () => {
       try {
         setLoading(true);
-        const response = await fetch(`${url}/api/ordenes-trabajo`);
+        const response = await fetch(`${URL}/api/ordenes-trabajo`);
         if (!response.ok) throw new Error('Error al cargar las órdenes de trabajo');
         
         const data = await response.json();

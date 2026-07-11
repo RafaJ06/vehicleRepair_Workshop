@@ -1,14 +1,10 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom'; 
 import { Wrench, User, Car, ArrowRight, AlertCircle } from 'lucide-react';
-import Dashboard_personal from '../Components/Dashboard_personal';
-import Client_Dashboard from '../Components/Client_Dashboard';
-import Dashboard_Admin from '../Components/Dashboard_Admin';
-import {url} from '../App';
+import{URL} from '../App';
 import '../Style/Auth.css';
 
 const Auth = () => {
-
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
@@ -22,7 +18,7 @@ const Auth = () => {
     setIsLoading(true);
 
     try {
-      const response = await fetch(`${url}/api/auth/login`, {
+      const response = await fetch(`${URL}/api/auth/login`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -30,23 +26,49 @@ const Auth = () => {
         body: JSON.stringify({ email, password }),
       });
 
+      const data = await response.json();
+
       if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.message || 'Credenciales incorrectas');
+        throw new Error(data.message || 'Credenciales incorrectas');
       }
 
-      const data = await response.json();
       
-      const rolUsuario = data.usuario?.rol?.nombre?.toLowerCase() || data.rol?.toLowerCase();
-
-      if (rolUsuario === 'admin' || rolUsuario === 'administrador') {
-        navigate(Dashboard_Admin);
-      } else if (['mecanico', 'recepcionista', 'personal'].includes(rolUsuario)) {
-        navigate(Dashboard_personal);
-      } else if (rolUsuario === 'cliente') {
-        navigate(Client_Dashboard);
+      if (data.token) {
+        localStorage.setItem('token', data.token);
+        localStorage.setItem('usuario', JSON.stringify(data.usuario || data)); 
       } else {
-        throw new Error('Rol no reconocido por el sistema.');
+        throw new Error('El servidor no devolvió un token válido.');
+      }
+
+      const encontrarRol = (obj) => {
+        if (!obj || typeof obj !== 'object') return '';
+        
+        if (obj.rol && obj.rol.nombre) return obj.rol.nombre;
+        if (obj.rol && typeof obj.rol === 'string') return obj.rol;
+        if (obj.role && typeof obj.role === 'string') return obj.role; 
+        
+        for (const key in obj) {
+          if (typeof obj[key] === 'object') {
+            const resultado = encontrarRol(obj[key]);
+            if (resultado) return resultado;
+          }
+        }
+        return ''; 
+      };
+
+      const rolEncontrado = encontrarRol(data);
+      const rolUsuario = String(rolEncontrado).toLowerCase().trim();
+
+      
+      if (['admin', 'administrador', 'supervisor'].includes(rolUsuario)) {
+        navigate('/admin'); 
+      } else if (['mecanico', 'recepcionista', 'personal'].includes(rolUsuario)) {
+        navigate('/personal'); 
+      } else if (['cliente', 'usuario'].includes(rolUsuario)) {
+        navigate('/clientes'); 
+      } else {
+        console.error("JSON Recibido desde la API:", data);
+        throw new Error(`Acceso denegado: El rol "${rolUsuario || 'Desconocido'}" no tiene un dashboard asignado.`);
       }
 
     } catch (err) {
@@ -62,7 +84,6 @@ const Auth = () => {
       <div className="portal-overlay"></div>
 
       <div className="portal-card">
-        
         <div className="portal-header">
           <div className="logo-circle">
             <Wrench className="logo-icon" />
@@ -71,7 +92,6 @@ const Auth = () => {
         </div>
 
         <form onSubmit={handleSubmit} className="portal-form">
-          
           {error && (
             <div className="error-message" style={{ color: '#ef4444', fontSize: '0.8rem', display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '1rem', backgroundColor: 'rgba(239, 68, 68, 0.1)', padding: '0.75rem', borderRadius: '4px', border: '1px solid #7f1d1d' }}>
               <AlertCircle size={16} />
@@ -80,14 +100,14 @@ const Auth = () => {
           )}
 
           <div className="form-group">
-            <label className="form-label">User</label>
+            <label className="form-label">Usuario</label>
             <div className="input-wrapper">
               <div className="input-icon">
                 <User size={16} />
               </div>
               <input
                 type="email"
-                placeholder="Email"
+                placeholder="Correo electrónico"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 className="form-input"
@@ -98,7 +118,7 @@ const Auth = () => {
           </div>
 
           <div className="form-group">
-            <label className="form-label">Password</label>
+            <label className="form-label">Contraseña</label>
             <div className="input-wrapper">
               <div className="input-icon">
                 <Car size={16} />
@@ -121,7 +141,6 @@ const Auth = () => {
               {!isLoading && <ArrowRight size={16} />}
             </button>
           </div>
-
         </form>
       </div>
     </div>

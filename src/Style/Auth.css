@@ -1,4 +1,4 @@
-/* Reseteo básico, tipografía y contenedores globales de React */
+
 *, *::before, *::after {
   box-sizing: border-box;
   margin: 0;
@@ -14,9 +14,7 @@ html, body, #root {
   overflow-x: hidden;
 }
 
-/* Contenedor principal a pantalla completa (Full Screen) */
 .portal-container {
-  /* Al usar fixed e inset 0, se asegura de cubrir toda la pantalla ignorando estilos padres de App.css */
   position: fixed;
   inset: 0;
   width: 100vw;
@@ -32,7 +30,6 @@ html, body, #root {
   z-index: 1;
 }
 
-/* Capa oscura opcional para dar contraste al fondo */
 .portal-overlay {
   position: absolute;
   inset: 0;
@@ -41,7 +38,7 @@ html, body, #root {
   z-index: 2;
 }
 
-/* Tarjeta del formulario */
+
 .portal-card {
   position: relative;
   z-index: 10;
@@ -54,7 +51,6 @@ html, body, #root {
   box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.7);
 }
 
-/* Encabezado y Logo */
 .portal-header {
   display: flex;
   flex-direction: column;
@@ -89,7 +85,6 @@ html, body, #root {
   text-transform: uppercase;
 }
 
-/* Formulario */
 .portal-form {
   display: flex;
   flex-direction: column;
@@ -149,7 +144,6 @@ html, body, #root {
   text-transform: uppercase;
 }
 
-/* Botón de Ingresar */
 .submit-button-container {
   padding-top: 0.5rem;
 }
