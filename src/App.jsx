@@ -6,6 +6,8 @@ import Dashboard_personal from './Components/Dashboard_personal';
 import Client_Dashboard from './Components/Client_Dashboard';
 import Gestion_Usuarios from './Components/Gestion_Usuarios';
 import OTS from './Components/OTS';
+import Clientes from './Components/Gestion_Clientes';
+import Inventario from './Components/Inventario';
 
 export const URL ="http://localhost:4000"
 function App() {
@@ -21,6 +23,8 @@ function App() {
         <Route path="/clientes" element={<Client_Dashboard />} />
         <Route path="/admin/usuarios" element={<Gestion_Usuarios />} />
         <Route path="/admin/OTS" element={<OTS />} />
+        <Route path='/admin/clientes' element={<Clientes />}/>
+        <Route path='/admin/inventario' element={<Inventario />} />
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
     </BrowserRouter>

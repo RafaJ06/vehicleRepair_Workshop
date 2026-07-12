@@ -5,7 +5,7 @@ import { URL } from '../App';
 import { AdminHeader } from './Header'; 
 import '../Style/OTS.css';
 
-const OrdenesTrabajo = () => {
+const OTS = () => {
   const [ordenes, setOrdenes] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
@@ -52,6 +52,7 @@ const OrdenesTrabajo = () => {
 
   useEffect(() => {
     fetchOrdenes();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const formatOtId = (id) => {
@@ -62,7 +63,6 @@ const OrdenesTrabajo = () => {
 
   return (
     <div className="ot-container">
-  
       <AdminHeader />
 
       <main className="ot-main">
@@ -114,11 +114,12 @@ const OrdenesTrabajo = () => {
                           {orden.vehiculo?.placa || 'Sin Placa'}
                         </span>
                         <span className="ot-client">
-                          {orden.cliente?.nombre || 'Cliente Desconocido'}
+                          {/* ✅ CORRECCIÓN: Leemos 'usuario' tal como viene del backend */}
+                          {orden.usuario?.nombre || orden.cliente?.nombre || 'Cliente Desconocido'}
                         </span>
                       </div>
                     </td>
-                    
+
                     <td>
                       <span className="ot-status-badge">
                         {orden.estado || 'PENDIENTE'}
@@ -136,4 +137,4 @@ const OrdenesTrabajo = () => {
   );
 };
 
-export default OrdenesTrabajo;
+export default OTS;
