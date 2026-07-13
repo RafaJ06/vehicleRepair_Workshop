@@ -13,7 +13,10 @@ router.get('/', asyncHandler(ctrl.listar));
 router.post(
   '/',
   authorize('mecanico', 'supervisor', 'administrador'),
-  [body('otId').isInt(), body('fallaDetectada').notEmpty().withMessage('fallaDetectada es requerida')],
+  [
+    body('otId').isInt().withMessage('otId es requerido y debe ser un número entero'), 
+    body('fallaDetectada').notEmpty().withMessage('fallaDetectada es requerida')
+  ],
   validate,
   asyncHandler(ctrl.crear)
 );

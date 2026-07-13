@@ -7,13 +7,14 @@ const { verifyToken, authorize } = require('../middlewares/auth.middleware');
 
 const router = Router();
 
+// Ajuste: anio y placa son opcionales según la BD, usamos .optional()
 const reglasVehiculo = [
   body('clienteId').isInt().withMessage('clienteId es requerido'),
   body('chasis').notEmpty().withMessage('chasis es requerido'),
   body('marca').notEmpty().withMessage('marca es requerida'),
   body('modelo').notEmpty().withMessage('modelo es requerido'),
-  body('anio').isInt({ min: 1950, max: 2100 }).withMessage('anio invalido'),
-  body('placa').notEmpty().withMessage('placa es requerida'),
+  body('anio').optional().isInt({ min: 1950, max: 2100 }).withMessage('anio invalido'),
+  body('placa').optional().notEmpty().withMessage('placa no puede estar vacía si se envía'),
 ];
 
 router.use(verifyToken);
