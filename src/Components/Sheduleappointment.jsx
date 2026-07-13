@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import { useState } from 'react';
 import { Calendar, CheckCircle } from 'lucide-react';
 import {Header_Client} from './Header';
 import '../Style/ScheduleAppointment.css';

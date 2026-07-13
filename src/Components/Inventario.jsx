@@ -1,9 +1,14 @@
-import React, { useState, useEffect } from 'react';
+import { useCallback, useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { AlertCircle, Plus, Edit, PackagePlus, X } from 'lucide-react';
 import { URL } from '../App';
 import { AdminHeader } from './Header'; 
 import '../Style/Inventario.css';
+
+const getAuthHeaders = () => ({
+  'Content-Type': 'application/json',
+  'Authorization': `Bearer ${localStorage.getItem('token')}`,
+});
 
 const Inventario = () => {
   const [materiales, setMateriales] = useState([]);
@@ -28,24 +33,16 @@ const Inventario = () => {
 
   const navigate = useNavigate();
 
-  const getAuthHeaders = () => {
-    const token = localStorage.getItem('token');
-    return {
-      'Content-Type': 'application/json',
-      'Authorization': `Bearer ${token}`
-    };
-  };
-
-  const handleAuthError = (status) => {
+  const handleAuthError = useCallback((status) => {
     if (status === 401 || status === 403) {
       localStorage.removeItem('token');
       localStorage.removeItem('usuario');
       navigate('/');
       throw new Error('Sesión expirada o permisos insuficientes.');
     }
-  };
+  }, [navigate]);
 
-  const fetchInventario = async () => {
+  const fetchInventario = useCallback(async () => {
     try {
       setLoading(true);
       setError('');
@@ -72,12 +69,11 @@ const Inventario = () => {
     } finally {
       setLoading(false);
     }
-  };
+  }, [handleAuthError]);
 
   useEffect(() => {
-    fetchInventario();
-    
-  }, []);
+    Promise.resolve().then(fetchInventario);
+  }, [fetchInventario]);
 
   const openStockModal = (item) => {
     setStockItem(item);

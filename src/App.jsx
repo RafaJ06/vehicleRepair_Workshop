@@ -1,4 +1,3 @@
-import React from 'react';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import Auth from './Components/Auth';
 import Dashboard_Admin from './Components/Dashboard_Admin';
@@ -8,6 +7,7 @@ import OTS from './Components/OTS';
 import Clientes from './Components/Gestion_Clientes';
 import Inventario from './Components/Inventario';
 import Vehiculos from './Components/Vehiculos';
+import CuentasPorCobrar from './Components/CuentasPorCobrar';
 
 export const URL = "http://localhost:4000";
 
@@ -26,6 +26,7 @@ function App() {
           <Route path="/admin/clientes" element={<Clientes />} />
           <Route path="/admin/inventario" element={<Inventario />} />
           <Route path="/admin/Vehiculos" element={<Vehiculos />} />
+          <Route path="/admin/cuentas-por-cobrar" element={<CuentasPorCobrar />} />
 
           {/* ================= RUTAS DEL PERSONAL ================= */}
           <Route path="/personal" element={<Dashboard_personal />} />
@@ -33,6 +34,7 @@ function App() {
           <Route path="/personal/clientes" element={<Clientes />} />
           <Route path="/personal/inventario" element={<Inventario />} />
           <Route path="/personal/Vehiculos" element={<Vehiculos />} />
+          <Route path="/personal/cuentas-por-cobrar" element={<CuentasPorCobrar />} />
          
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>

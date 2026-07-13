@@ -1,6 +1,6 @@
 import { Link, useLocation, useNavigate } from 'react-router-dom';
-import { Wrench, LogOut, Shield } from 'lucide-react';
-import React, { useState, useEffect } from 'react';
+import { Wrench, LogOut, Shield, Banknote } from 'lucide-react';
+import { useState } from 'react';
 import '../Style/Header.css';
 
 export const Header_Personal = () => {
@@ -61,37 +61,29 @@ export const Header_Client = () => {
   );
 };
 
+const readStoredUser = () => {
+  const defaults = { userName: 'USUARIO', userRole: 'ADMINISTRADOR' };
+  const userDataString = localStorage.getItem('usuario');
+  if (!userDataString) return defaults;
+  try {
+    const userData = JSON.parse(userDataString);
+    const role = userData?.rol?.nombre ?? (typeof userData?.rol === 'string' ? userData.rol : '');
+    return {
+      userName: userData?.nombre ? String(userData.nombre).toUpperCase() : defaults.userName,
+      userRole: role ? String(role).toUpperCase() : defaults.userRole,
+    };
+  } catch (error) {
+    console.error('Error parseando los datos del usuario:', error);
+    return defaults;
+  }
+};
+
 export const AdminHeader = () => {
-  const [userName, setUserName] = useState('USUARIO');
-  const [userRole, setUserRole] = useState('ADMINISTRADOR');
+  const [userInfo] = useState(readStoredUser);
+  const { userName, userRole } = userInfo;
   
   const location = useLocation();
   const navigate = useNavigate();
-
-  useEffect(() => {
-    const userDataString = localStorage.getItem('usuario');
-    
-    if (userDataString) {
-      try {
-        const userData = JSON.parse(userDataString);
-        
-        if (userData.nombre) setUserName(userData.nombre.toUpperCase());
-
-        const encontrarRol = (obj) => {
-          if (!obj || typeof obj !== 'object') return '';
-          if (obj.rol && obj.rol.nombre) return obj.rol.nombre;
-          if (obj.rol && typeof obj.rol === 'string') return obj.rol;
-          return '';
-        };
-
-        const rolEncontrado = encontrarRol(userData);
-        if (rolEncontrado) setUserRole(String(rolEncontrado).toUpperCase());
-        
-      } catch (error) {
-        console.error("Error parseando los datos del usuario:", error);
-      }
-    }
-  }, []);
 
   const handleLogout = () => {
     localStorage.removeItem('token');
@@ -100,6 +92,7 @@ export const AdminHeader = () => {
   };
 
   const isActive = (path) => location.pathname === path;
+  const canViewReceivables = ['ADMINISTRADOR', 'ADMIN', 'SUPERVISOR', 'RECEPCIONISTA'].includes(userRole);
 
   return (
     <header className="navbar">
@@ -117,6 +110,12 @@ export const AdminHeader = () => {
         <Link to="/admin/inventario" className={`nav-link ${isActive('/admin/inventario') ? 'active' : ''}`}>INVENTARIO</Link>
         <Link to="/admin/clientes" className={`nav-link ${isActive('/admin/clientes') ? 'active' : ''}`}>CLIENTES</Link>
         <Link to="/admin/vehiculos" className={`nav-link ${isActive('/admin/vehiculos') ? 'active' : ''}`}>VEHÍCULOS</Link>
+        {canViewReceivables && (
+          <Link to={userRole === 'RECEPCIONISTA' ? '/personal/cuentas-por-cobrar' : '/admin/cuentas-por-cobrar'} className={`nav-link ${location.pathname.endsWith('/cuentas-por-cobrar') ? 'active' : ''}`}>
+            <Banknote size={16} />
+            <span>CUENTAS POR COBRAR</span>
+          </Link>
+        )}
         <span className="nav-separator">|</span>
         <Link to="/admin/usuarios" className={`nav-link ${isActive('/admin/usuarios') ? 'active' : ''}`}>
           <Shield size={16} />

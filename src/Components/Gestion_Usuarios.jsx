@@ -1,9 +1,13 @@
-import React, { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useCallback, useState, useEffect } from 'react';
 import { AlertCircle, Plus, UserCog, Search, Filter, ChevronLeft, ChevronRight } from 'lucide-react';
 import { URL } from '../App';
 import { AdminHeader } from './Header'; 
 import '../Style/Gestion_Usuarios.css';
+
+const getAuthHeaders = () => ({
+  'Content-Type': 'application/json',
+  'Authorization': `Bearer ${localStorage.getItem('token')}`,
+});
 
 const Gestion_Usuarios = () => {
   const [usuarios, setUsuarios] = useState([]);
@@ -16,14 +20,7 @@ const Gestion_Usuarios = () => {
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 8;
 
-  const navigate = useNavigate();
-
-  const getAuthHeaders = () => {
-    const token = localStorage.getItem('token');
-    return { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` };
-  };
-
-  const fetchUsuarios = async () => {
+  const fetchUsuarios = useCallback(async () => {
     try {
       setLoading(true);
       const response = await fetch(`${URL}/api/usuarios`, { headers: getAuthHeaders() });
@@ -38,12 +35,11 @@ const Gestion_Usuarios = () => {
     } finally {
       setLoading(false);
     }
-  };
+  }, []);
 
   useEffect(() => {
-    fetchUsuarios();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+    Promise.resolve().then(fetchUsuarios);
+  }, [fetchUsuarios]);
 
   const handleSuspender = async (id) => {
     if (!window.confirm("¿Seguro que deseas cambiar el estado de este usuario?")) return;
@@ -87,11 +83,6 @@ const Gestion_Usuarios = () => {
   const indexOfLastItem = currentPage * itemsPerPage;
   const indexOfFirstItem = indexOfLastItem - itemsPerPage;
   const currentItems = processedUsuarios.slice(indexOfFirstItem, indexOfLastItem);
-
-  // Reiniciar a la página 1 cuando se busca o se filtra
-  useEffect(() => {
-    setCurrentPage(1);
-  }, [searchTerm, sortOption]);
 
   const nextPage = () => setCurrentPage(prev => Math.min(prev + 1, totalPages));
   const prevPage = () => setCurrentPage(prev => Math.max(prev - 1, 1));
@@ -139,7 +130,7 @@ const Gestion_Usuarios = () => {
               className="search-input" 
               placeholder="Buscar nombre, correo, rol o sucursal..." 
               value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
+              onChange={(e) => { setSearchTerm(e.target.value); setCurrentPage(1); }}
             />
           </div>
           <div className="filter-wrapper">
@@ -147,7 +138,7 @@ const Gestion_Usuarios = () => {
             <select 
               className="filter-select"
               value={sortOption}
-              onChange={(e) => setSortOption(e.target.value)}
+              onChange={(e) => { setSortOption(e.target.value); setCurrentPage(1); }}
             >
               <option value="recientes">Más Recientes</option>
               <option value="nombre-a-z">Nombre (A - Z)</option>

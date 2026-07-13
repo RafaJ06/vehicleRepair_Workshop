@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { Activity, Car, AlertCircle } from 'lucide-react';
 import '../Style/Dashboard_Personal.css';
 import {URL} from '../App';

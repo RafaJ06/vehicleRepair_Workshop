@@ -1,9 +1,14 @@
-import React, { useState, useEffect } from 'react';
+import { useCallback, useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Plus, AlertCircle } from 'lucide-react';
 import { URL } from '../App';
 import { AdminHeader } from './Header'; 
 import '../Style/OTS.css';
+
+const getAuthHeaders = () => ({
+  'Content-Type': 'application/json',
+  'Authorization': `Bearer ${localStorage.getItem('token')}`,
+});
 
 const OTS = () => {
   const [ordenes, setOrdenes] = useState([]);
@@ -12,24 +17,16 @@ const OTS = () => {
   
   const navigate = useNavigate();
 
-  const getAuthHeaders = () => {
-    const token = localStorage.getItem('token');
-    return {
-      'Content-Type': 'application/json',
-      'Authorization': `Bearer ${token}`
-    };
-  };
-
-  const handleAuthError = (status) => {
+  const handleAuthError = useCallback((status) => {
     if (status === 401 || status === 403) {
       localStorage.removeItem('token');
       localStorage.removeItem('usuario');
       navigate('/');
       throw new Error('Sesión expirada o permisos insuficientes.');
     }
-  };
+  }, [navigate]);
 
-  const fetchOrdenes = async () => {
+  const fetchOrdenes = useCallback(async () => {
     try {
       setLoading(true);
       setError('');
@@ -48,12 +45,11 @@ const OTS = () => {
     } finally {
       setLoading(false);
     }
-  };
+  }, [handleAuthError]);
 
   useEffect(() => {
-    fetchOrdenes();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+    Promise.resolve().then(fetchOrdenes);
+  }, [fetchOrdenes]);
 
   const formatOtId = (id) => {
     if (!id) return 'OT-???';

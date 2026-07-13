@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 // Importación de componentes y utilidades
 import { AdminHeader } from '../Components/Header'; // Asegúrate de usar la importación con llaves si cambiaste a Named Exports
 import { URL } from '../App';
@@ -11,7 +11,6 @@ import {
   BarChart2, 
   TrendingUp, 
   Shield, 
-  UserCog, 
   ChevronRight,
   ChevronLeft
 } from 'lucide-react';

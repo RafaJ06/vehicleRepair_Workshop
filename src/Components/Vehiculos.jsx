@@ -1,9 +1,14 @@
-import React, { useState, useEffect } from 'react';
+import { useCallback, useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { AlertCircle, Plus, Edit, Trash2, X, CarFront, Search, Filter, ChevronLeft, ChevronRight } from 'lucide-react';
 import { URL } from '../App';
 import { AdminHeader } from './Header'; 
 import '../Style/Vehiculos.css';
+
+const getAuthHeaders = () => ({
+  'Content-Type': 'application/json',
+  'Authorization': `Bearer ${localStorage.getItem('token')}`,
+});
 
 const Gestion_Vehiculos = () => {
   const [vehiculos, setVehiculos] = useState([]);
@@ -34,24 +39,16 @@ const Gestion_Vehiculos = () => {
 
   const navigate = useNavigate();
 
-  const getAuthHeaders = () => {
-    const token = localStorage.getItem('token');
-    return {
-      'Content-Type': 'application/json',
-      'Authorization': `Bearer ${token}`
-    };
-  };
-
-  const handleAuthError = (status) => {
+  const handleAuthError = useCallback((status) => {
     if (status === 401 || status === 403) {
       localStorage.removeItem('token');
       localStorage.removeItem('usuario');
       navigate('/');
       throw new Error('Sesión expirada o permisos insuficientes.');
     }
-  };
+  }, [navigate]);
 
-  const fetchData = async () => {
+  const fetchData = useCallback(async () => {
     try {
       setLoading(true);
       setError('');
@@ -83,12 +80,11 @@ const Gestion_Vehiculos = () => {
     } finally {
       setLoading(false);
     }
-  };
+  }, [handleAuthError]);
 
   useEffect(() => {
-    fetchData();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+    Promise.resolve().then(fetchData);
+  }, [fetchData]);
 
   const handleDelete = async (id) => {
     if (!window.confirm("¿Estás seguro de que deseas eliminar este vehículo?")) return;
@@ -142,11 +138,6 @@ const Gestion_Vehiculos = () => {
   const indexOfLastItem = currentPage * itemsPerPage;
   const indexOfFirstItem = indexOfLastItem - itemsPerPage;
   const currentItems = processedVehiculos.slice(indexOfFirstItem, indexOfLastItem);
-
-  // Reiniciar a la página 1 cuando se busca o se filtra
-  useEffect(() => {
-    setCurrentPage(1);
-  }, [searchTerm, sortOption]);
 
   const nextPage = () => setCurrentPage(prev => Math.min(prev + 1, totalPages));
   const prevPage = () => setCurrentPage(prev => Math.max(prev - 1, 1));
@@ -255,7 +246,7 @@ const Gestion_Vehiculos = () => {
               className="search-input" 
               placeholder="Buscar placa, marca, modelo o dueño..." 
               value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
+              onChange={(e) => { setSearchTerm(e.target.value); setCurrentPage(1); }}
             />
           </div>
           <div className="filter-wrapper">
@@ -263,7 +254,7 @@ const Gestion_Vehiculos = () => {
             <select 
               className="filter-select"
               value={sortOption}
-              onChange={(e) => setSortOption(e.target.value)}
+              onChange={(e) => { setSortOption(e.target.value); setCurrentPage(1); }}
             >
               <option value="recientes">Más Recientes</option>
               <option value="marca-a-z">Marca (A - Z)</option>
