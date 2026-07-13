@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { AlertCircle, Plus, Edit, Trash2, X, Users } from 'lucide-react';
+import { AlertCircle, Plus, Edit, Trash2, X, Users, Search, Filter, ChevronLeft, ChevronRight } from 'lucide-react';
 import { URL } from '../App';
 import { AdminHeader } from './Header'; 
 import '../Style/Gestion_Clientes.css';
@@ -10,6 +10,13 @@ const Gestion_Clientes = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   
+  // ================= ESTADOS DE CONTROLES (Buscador y Paginación) =================
+  const [searchTerm, setSearchTerm] = useState('');
+  const [sortOption, setSortOption] = useState('recientes'); // recientes, a-z, z-a
+  const [currentPage, setCurrentPage] = useState(1);
+  const itemsPerPage = 8; // Cantidad de clientes por página
+
+  // ================= ESTADOS DEL MODAL =================
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingCliente, setEditingCliente] = useState(null);
   const [formLoading, setFormLoading] = useState(false);
@@ -85,6 +92,43 @@ const Gestion_Clientes = () => {
     }
   };
 
+  // ================= LÓGICA DE PROCESAMIENTO (Búsqueda, Orden y Paginación) =================
+
+  // 1. Filtrar por búsqueda
+  let processedClientes = clientes.filter(cliente => {
+    const searchLower = searchTerm.toLowerCase();
+    return (
+      (cliente.nombre || '').toLowerCase().includes(searchLower) ||
+      (cliente.identificacion || '').toLowerCase().includes(searchLower) ||
+      (cliente.email || '').toLowerCase().includes(searchLower)
+    );
+  });
+
+  // 2. Ordenar
+  if (sortOption === 'a-z') {
+    processedClientes.sort((a, b) => (a.nombre || '').localeCompare(b.nombre || ''));
+  } else if (sortOption === 'z-a') {
+    processedClientes.sort((a, b) => (b.nombre || '').localeCompare(a.nombre || ''));
+  } else {
+    // Si tuvieras un ID autoincremental o fecha de creación, se ordenaría aquí.
+    // Por defecto lo dejamos como viene de la API.
+  }
+
+  // 3. Paginación
+  const totalPages = Math.ceil(processedClientes.length / itemsPerPage);
+  const indexOfLastItem = currentPage * itemsPerPage;
+  const indexOfFirstItem = indexOfLastItem - itemsPerPage;
+  const currentItems = processedClientes.slice(indexOfFirstItem, indexOfLastItem);
+
+  // Reiniciar a la página 1 cuando se busca o se filtra
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [searchTerm, sortOption]);
+
+  const nextPage = () => setCurrentPage(prev => Math.min(prev + 1, totalPages));
+  const prevPage = () => setCurrentPage(prev => Math.max(prev - 1, 1));
+
+  // ================= MANEJO DE MODALES =================
   const openCreateModal = () => {
     setEditingCliente(null);
     setFormData({ id_tipo_identificacion: 1, identificacion: '', nombre: '', telefono: '', direccion: '', email: '' });
@@ -174,6 +218,33 @@ const Gestion_Clientes = () => {
           </div>
         )}
 
+        {/* ================= BARRA DE CONTROLES (Buscador y Filtro) ================= */}
+        <div className="controls-bar">
+          <div className="search-wrapper">
+            <Search className="search-icon" size={18} />
+            <input 
+              type="text" 
+              className="search-input" 
+              placeholder="Buscar por nombre, cédula o correo..." 
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+            />
+          </div>
+          <div className="filter-wrapper">
+            <Filter className="filter-icon" size={18} />
+            <select 
+              className="filter-select"
+              value={sortOption}
+              onChange={(e) => setSortOption(e.target.value)}
+            >
+              <option value="recientes">Más Recientes</option>
+              <option value="a-z">Nombre (A - Z)</option>
+              <option value="z-a">Nombre (Z - A)</option>
+            </select>
+          </div>
+        </div>
+
+        {/* ================= TABLA DE CLIENTES ================= */}
         <div className="table-wrapper">
           <table className="data-table">
             <thead>
@@ -188,10 +259,10 @@ const Gestion_Clientes = () => {
             <tbody>
               {loading ? (
                 <tr><td colSpan="5" className="text-center py-4 text-gray">Cargando...</td></tr>
-              ) : clientes.length === 0 ? (
-                <tr><td colSpan="5" className="text-center py-4 text-gray">No hay registros.</td></tr>
+              ) : currentItems.length === 0 ? (
+                <tr><td colSpan="5" className="text-center py-4 text-gray">No se encontraron clientes.</td></tr>
               ) : (
-                clientes.map((cliente) => (
+                currentItems.map((cliente) => (
                   <tr key={cliente.id}>
                     <td className="font-bold text-white">{cliente.identificacion || 'N/A'}</td>
                     <td className="font-bold text-white">{cliente.nombre || 'Sin Nombre'}</td>
@@ -213,9 +284,28 @@ const Gestion_Clientes = () => {
             </tbody>
           </table>
         </div>
+
+        {/* ================= PAGINACIÓN ================= */}
+        {!loading && totalPages > 1 && (
+          <div className="pagination-bar">
+            <span className="pagination-info">
+              Mostrando {indexOfFirstItem + 1} a {Math.min(indexOfLastItem, processedClientes.length)} de {processedClientes.length}
+            </span>
+            <div className="pagination-controls">
+              <button className="btn-page" onClick={prevPage} disabled={currentPage === 1}>
+                <ChevronLeft size={18} />
+              </button>
+              <span className="page-indicator">Página {currentPage} de {totalPages}</span>
+              <button className="btn-page" onClick={nextPage} disabled={currentPage === totalPages}>
+                <ChevronRight size={18} />
+              </button>
+            </div>
+          </div>
+        )}
+
       </main>
 
-      {/* MODAL */}
+      {/* ================= MODAL DE CREACIÓN/EDICIÓN ================= */}
       {isModalOpen && (
         <div className="custom-modal-overlay">
           <div className="custom-modal">

@@ -1,49 +1,38 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Users, Shield, CheckCircle, XCircle, AlertCircle } from 'lucide-react';
-import {AdminHeader} from './Header';
+import { AlertCircle, Plus, UserCog, Search, Filter, ChevronLeft, ChevronRight } from 'lucide-react';
+import { URL } from '../App';
+import { AdminHeader } from './Header'; 
 import '../Style/Gestion_Usuarios.css';
-import {URL} from '../App';
 
 const Gestion_Usuarios = () => {
-  const [users, setUsers] = useState([]);
+  const [usuarios, setUsuarios] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
-  
-  const navigate = useNavigate();
 
-  const availableRoles = ['administrador', 'supervisor', 'mecanico', 'recepcionista'];
+  // ================= ESTADOS DE CONTROLES (Buscador y Paginación) =================
+  const [searchTerm, setSearchTerm] = useState('');
+  const [sortOption, setSortOption] = useState('recientes'); 
+  const [currentPage, setCurrentPage] = useState(1);
+  const itemsPerPage = 8;
+
+  const navigate = useNavigate();
 
   const getAuthHeaders = () => {
     const token = localStorage.getItem('token');
-    return {
-      'Content-Type': 'application/json',
-      'Authorization': `Bearer ${token}`
-    };
+    return { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` };
   };
 
-  const handleAuthError = (status) => {
-    if (status === 401 || status === 403) {
-      localStorage.removeItem('token');
-      localStorage.removeItem('usuario');
-      navigate('/');
-      throw new Error('Sesión expirada o permisos insuficientes.');
-    }
-  };
-
-  const fetchUsers = async () => {
+  const fetchUsuarios = async () => {
     try {
       setLoading(true);
-      setError('');
-      const response = await fetch(`${URL}/api/usuarios`, {
-        headers: getAuthHeaders()
-      });
-      
-      handleAuthError(response.status);
-      if (!response.ok) throw new Error('Error al obtener los usuarios');
+      const response = await fetch(`${URL}/api/usuarios`, { headers: getAuthHeaders() });
+      if (!response.ok) throw new Error('Error al obtener usuarios');
       
       const data = await response.json();
-      setUsers(data);
+      if (Array.isArray(data)) setUsuarios(data);
+      else if (data && Array.isArray(data.data)) setUsuarios(data.data);
+      else setUsuarios([]);
     } catch (err) {
       setError(err.message);
     } finally {
@@ -52,66 +41,86 @@ const Gestion_Usuarios = () => {
   };
 
   useEffect(() => {
-    fetchUsers();
-    
+    fetchUsuarios();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  const toggleUserStatus = async (id, currentStatus) => {
+  const handleSuspender = async (id) => {
+    if (!window.confirm("¿Seguro que deseas cambiar el estado de este usuario?")) return;
     try {
-      const response = await fetch(`${URL}/api/usuarios/${id}/estado`, {
+      await fetch(`${URL}/api/usuarios/${id}/estado`, {
         method: 'PATCH',
         headers: getAuthHeaders(),
-        body: JSON.stringify({ activo: !currentStatus }),
       });
-      
-      handleAuthError(response.status);
-      if (!response.ok) throw new Error('Error al cambiar el estado');
-      
-      const updatedUser = await response.json();
-      
-      setUsers(users.map(u => (u.id === id ? { ...u, estado: updatedUser.estado !== undefined ? updatedUser.estado : !currentStatus } : u)));
+      fetchUsuarios();
     } catch (err) {
-      alert(err.message);
+      alert(`Error: ${err.message}`);
     }
   };
 
-  const handleRoleChange = async (id, newRoleName) => {
-    try {
-      const response = await fetch(`${URL}/api/usuarios/${id}/rol`, {
-        method: 'PATCH',
-        headers: getAuthHeaders(),
-        body: JSON.stringify({ rolNombre: newRoleName }),
-      });
+  // ================= LÓGICA DE PROCESAMIENTO (Búsqueda, Orden y Paginación) =================
 
-      handleAuthError(response.status);
-      if (!response.ok) throw new Error('Error al actualizar el rol');
-      
-      const updatedUser = await response.json();
-      setUsers(users.map(u => (u.id === id ? { ...u, rol: updatedUser.rol } : u)));
-    } catch (err) {
-      alert(err.message);
-      fetchUsers(); 
-    }
-  };
+  // 1. Filtrar por búsqueda
+  let processedUsuarios = usuarios.filter(user => {
+    const searchLower = searchTerm.toLowerCase();
+    return (
+      (user.nombre || '').toLowerCase().includes(searchLower) ||
+      (user.email || '').toLowerCase().includes(searchLower) ||
+      (user.rol?.nombre || '').toLowerCase().includes(searchLower) ||
+      (user.sucursal?.nombre || '').toLowerCase().includes(searchLower)
+    );
+  });
+
+  // 2. Ordenar
+  if (sortOption === 'nombre-a-z') {
+    processedUsuarios.sort((a, b) => (a.nombre || '').localeCompare(b.nombre || ''));
+  } else if (sortOption === 'nombre-z-a') {
+    processedUsuarios.sort((a, b) => (b.nombre || '').localeCompare(a.nombre || ''));
+  } else if (sortOption === 'activos') {
+    processedUsuarios.sort((a, b) => (b.estado === true ? 1 : 0) - (a.estado === true ? 1 : 0));
+  } else if (sortOption === 'inactivos') {
+    processedUsuarios.sort((a, b) => (a.estado === true ? 1 : 0) - (b.estado === true ? 1 : 0));
+  }
+
+  // 3. Paginación
+  const totalPages = Math.ceil(processedUsuarios.length / itemsPerPage);
+  const indexOfLastItem = currentPage * itemsPerPage;
+  const indexOfFirstItem = indexOfLastItem - itemsPerPage;
+  const currentItems = processedUsuarios.slice(indexOfFirstItem, indexOfLastItem);
+
+  // Reiniciar a la página 1 cuando se busca o se filtra
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [searchTerm, sortOption]);
+
+  const nextPage = () => setCurrentPage(prev => Math.min(prev + 1, totalPages));
+  const prevPage = () => setCurrentPage(prev => Math.max(prev - 1, 1));
+
 
   return (
-    <div className="management-container">
+    <div className="dashboard-container">
       <AdminHeader />
-      
-      <section className="management-hero">
-        <div className="management-hero-content">
-          <h1 className="management-hero-title">
-            <span className="text-white">GESTIÓN DE</span> <span className="text-red">USUARIOS</span>
-          </h1>
-          <p className="management-hero-subtitle">ADMINISTRACIÓN DE ACCESOS, ROLES Y SUCURSALES</p>
-        </div>
-      </section>
 
-      <main className="management-main">
-        
-        <div className="section-header">
-          <Users className="section-icon text-red" size={24} />
-          <h2 className="section-title">DIRECTORIO DEL SISTEMA</h2>
+      {/* ================= BANNER GIGANTE ================= */}
+      <div className="hero-banner">
+        <div className="hero-content">
+          <h1>GESTIÓN DE <span className="text-red">USUARIOS</span></h1>
+          <p>ADMINISTRACIÓN DE ACCESOS, ROLES Y SUCURSALES</p>
+        </div>
+        <div className="hero-slash"></div>
+      </div>
+
+      <main className="dashboard-main">
+        <div className="page-header">
+          <div className="header-title-group">
+            <UserCog size={24} color="#ef4444" />
+            <h2 className="page-subtitle">DIRECTORIO DEL SISTEMA</h2>
+          </div>
+          
+          <button className="btn-create-primary" onClick={() => alert("Abrir modal de crear usuario")}>
+            <Plus size={16} strokeWidth={3} />
+            <span>NUEVO USUARIO</span>
+          </button>
         </div>
 
         {error && (
@@ -121,8 +130,37 @@ const Gestion_Usuarios = () => {
           </div>
         )}
 
+        {/* ================= BARRA DE CONTROLES (Buscador y Filtro) ================= */}
+        <div className="controls-bar">
+          <div className="search-wrapper">
+            <Search className="search-icon" size={18} />
+            <input 
+              type="text" 
+              className="search-input" 
+              placeholder="Buscar nombre, correo, rol o sucursal..." 
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+            />
+          </div>
+          <div className="filter-wrapper">
+            <Filter className="filter-icon" size={18} />
+            <select 
+              className="filter-select"
+              value={sortOption}
+              onChange={(e) => setSortOption(e.target.value)}
+            >
+              <option value="recientes">Más Recientes</option>
+              <option value="nombre-a-z">Nombre (A - Z)</option>
+              <option value="nombre-z-a">Nombre (Z - A)</option>
+              <option value="activos">Solo Activos</option>
+              <option value="inactivos">Solo Inactivos</option>
+            </select>
+          </div>
+        </div>
+
+        {/* ================= TABLA DE USUARIOS ================= */}
         <div className="table-wrapper">
-          <table className="management-table">
+          <table className="data-table">
             <thead>
               <tr>
                 <th>USUARIO / EMAIL</th>
@@ -134,79 +172,57 @@ const Gestion_Usuarios = () => {
             </thead>
             <tbody>
               {loading ? (
-                <tr>
-                  <td colSpan="5" className="text-center py-4 text-gray">Cargando usuarios...</td>
-                </tr>
-              ) : users.length === 0 ? (
-                <tr>
-                  <td colSpan="5" className="text-center py-4 text-gray">No hay usuarios registrados.</td>
-                </tr>
+                <tr><td colSpan="5" className="text-center py-4 text-gray">Cargando base de datos...</td></tr>
+              ) : currentItems.length === 0 ? (
+                <tr><td colSpan="5" className="text-center py-4 text-gray">No se encontraron usuarios.</td></tr>
               ) : (
-                users.map((user) => (
-                  // CORRECCIÓN: Leemos user.estado en lugar de user.activo
-                  <tr key={user.id} className={!user.estado ? 'row-inactive' : ''}>
-                    
+                currentItems.map((user) => (
+                  <tr key={user.id}>
                     <td>
-                      <div className="user-info-cell">
-                        <span className="user-name">{user.nombre}</span>
-                        <span className="user-email">{user.email}</span>
-                      </div>
+                      <div className="font-bold text-white">{user.nombre}</div>
+                      <div className="text-gray" style={{fontSize: '0.8rem'}}>{user.email}</div>
                     </td>
                     <td>
-                      <span className="branch-badge">
-                        {user.sucursal?.nombre || 'Central'}
-                      </span>
+                      <span className="badge-sucursal">{user.sucursal?.nombre || 'Central'}</span>
                     </td>
-
                     <td>
-                      <div className="role-select-wrapper">
-                        <Shield size={14} className="role-icon" />
-                        <select 
-                          className="role-select"
-                          value={user.rol?.nombre || ''}
-                          onChange={(e) => handleRoleChange(user.id, e.target.value)}
-                          disabled={!user.estado}
-                          style={{ textTransform: 'capitalize' }}
-                        >
-                          <option value="" disabled>Seleccionar Rol</option>
-                          {availableRoles.map(role => (
-                            <option key={role} value={role}>{role}</option>
-                          ))}
-                        </select>
-                      </div>
+                      <span className="badge-rol">{user.rol?.nombre || 'Administrador'}</span>
                     </td>
-
                     <td>
-                      <span className={`status-badge ${user.estado ? 'badge-active' : 'badge-inactive'}`}>
+                      <span className={`badge-estado ${user.estado ? 'activo' : 'inactivo'}`}>
                         {user.estado ? 'ACTIVO' : 'INACTIVO'}
                       </span>
                     </td>
-
                     <td>
-                      <button 
-                        className={`btn-action ${user.estado ? 'btn-deactivate' : 'btn-activate'}`}
-                        onClick={() => toggleUserStatus(user.id, user.estado)}
-                      >
-                        {user.estado ? (
-                          <>
-                            <XCircle size={16} />
-                            <span>SUSPENDER</span>
-                          </>
-                        ) : (
-                          <>
-                            <CheckCircle size={16} />
-                            <span>ACTIVAR</span>
-                          </>
-                        )}
+                      <button className="btn-text-action" onClick={() => handleSuspender(user.id)}>
+                        {user.estado ? 'SUSPENDER' : 'ACTIVAR'}
                       </button>
                     </td>
-
                   </tr>
                 ))
               )}
             </tbody>
           </table>
         </div>
+
+        {/* ================= PAGINACIÓN ================= */}
+        {!loading && totalPages > 1 && (
+          <div className="pagination-bar">
+            <span className="pagination-info">
+              Mostrando {indexOfFirstItem + 1} a {Math.min(indexOfLastItem, processedUsuarios.length)} de {processedUsuarios.length}
+            </span>
+            <div className="pagination-controls">
+              <button className="btn-page" onClick={prevPage} disabled={currentPage === 1}>
+                <ChevronLeft size={18} />
+              </button>
+              <span className="page-indicator">Página {currentPage} de {totalPages}</span>
+              <button className="btn-page" onClick={nextPage} disabled={currentPage === totalPages}>
+                <ChevronRight size={18} />
+              </button>
+            </div>
+          </div>
+        )}
+
       </main>
     </div>
   );
