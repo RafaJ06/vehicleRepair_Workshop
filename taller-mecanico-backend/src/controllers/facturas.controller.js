@@ -1,77 +1,6 @@
 const prisma = require('../config/prisma');
 const ApiError = require('../utils/ApiError');
 
-<<<<<<< HEAD
-// Relaciones siempre incluidas en respuestas de factura
-const include = {
-  factura_detalles: {
-    include: {
-      materiales_repuestos: {
-        select: { id_material: true, nombre: true, precio_unitario: true },
-      },
-    },
-  },
-  factura_diagnostico_puente: {
-    include: {
-      diagnosticos: {
-        select: { id: true, fallaDetectada: true, estatus: true },
-      },
-    },
-  },
-  clientes: {
-    select: { id: true, nombre: true, identificacion: true, email: true, telefono: true },
-  },
-  ordenTrabajo: {
-    select: { id: true, estatus: true, fecha_creacion: true, fechaCierre: true },
-  },
-  cuentas_por_cobrar: true,
-};
-=======
-<<<<<<< HEAD
-const include = { detalles: { include: { material: true } }, ordenTrabajo: true };
->>>>>>> b45b674414d60c146ad3dda0e6fade74198f150f
-
-// Valores válidos para estatus de factura
-const ESTATUS_FACTURA = ['Pendiente', 'Pagada', 'Anulada'];
-
-// ─────────────────────────────────────────────
-// GET /api/facturas
-// Query params: otId, clienteId, estatus, page, limit
-// ─────────────────────────────────────────────
-async function listar(req, res) {
-  const { otId, clienteId, estatus, page = 1, limit = 20 } = req.query;
-  const skip = (Number(page) - 1) * Number(limit);
-
-  const where = {
-    estado: true,
-    ...(otId && { otId: Number(otId) }),
-    ...(clienteId && { id_cliente: Number(clienteId) }),
-    ...(estatus && { estatus }),
-  };
-
-  const [data, total] = await Promise.all([
-    prisma.factura.findMany({
-      where,
-      include,
-      orderBy: { fecha: 'desc' },
-      skip,
-      take: Number(limit),
-    }),
-    prisma.factura.count({ where }),
-  ]);
-
-  res.json({ data, total, page: Number(page), limit: Number(limit) });
-}
-
-// ─────────────────────────────────────────────
-// GET /api/facturas/:id
-// ─────────────────────────────────────────────
-async function obtener(req, res) {
-  const id = Number(req.params.id);
-<<<<<<< HEAD
-=======
-  const factura = await prisma.factura.findUnique({ where: { id }, include });
-=======
 // Relaciones siempre incluidas en respuestas de factura
 const include = {
   factura_detalles: {
@@ -134,104 +63,16 @@ async function listar(req, res) {
 // ─────────────────────────────────────────────
 async function obtener(req, res) {
   const id = Number(req.params.id);
->>>>>>> b45b674414d60c146ad3dda0e6fade74198f150f
 
   const factura = await prisma.factura.findFirst({
     where: { id, estado: true },
     include,
   });
 
-<<<<<<< HEAD
-=======
->>>>>>> feature/ordenes-trabajo
->>>>>>> b45b674414d60c146ad3dda0e6fade74198f150f
   if (!factura) throw ApiError.notFound('Factura no encontrada.');
   res.json(factura);
 }
 
-<<<<<<< HEAD
-// ─────────────────────────────────────────────
-// POST /api/facturas
-// Crea una factura asociada a una OT.
-// Reglas de negocio:
-//   - La OT debe existir y estar activa
-//   - No puede tener otra factura activa ya creada
-//   - Al agregar detalles con id_material se valida stock y se descuenta automáticamente
-//   - Se crea automáticamente una cuenta por cobrar si el estatus es "Pendiente"
-//
-// body: {
-//   otId,
-//   id_cliente,
-//   estatus?,           // "Pendiente" (default) | "Pagada"
-//   detalles: [{ id_material?, cantidad, precio_unitario, valor_impuesto }],
-//   diagnosticos?: [id_diagnostico]   // IDs de diagnósticos a vincular
-// }
-// ─────────────────────────────────────────────
-=======
-<<<<<<< HEAD
-// POST /api/facturas -> CU-03 Facturar Servicio
-// body: { otId, formaPago, items: [{ materialId?, descripcion, cantidad, precioUnitario }] }
-// Regla de negocio: "el inventario se descontara automaticamente" al agregar piezas con materialId.
->>>>>>> b45b674414d60c146ad3dda0e6fade74198f150f
-async function crear(req, res) {
-  const { otId, id_cliente, estatus = 'Pendiente', detalles, diagnosticos = [] } = req.body;
-
-  if (!Array.isArray(detalles) || detalles.length === 0) {
-    throw ApiError.badRequest('Debe incluir al menos un detalle en la factura.');
-  }
-
-  // Verificar OT
-  const orden = await prisma.ordenTrabajo.findFirst({
-    where: { id: Number(otId), estado: true },
-    include: { facturas: true },
-  });
-  if (!orden) throw ApiError.badRequest('La orden de trabajo indicada no existe o está inactiva.');
-  if (orden.facturas && orden.facturas.estado) {
-    throw ApiError.conflict('La orden de trabajo ya tiene una factura activa asociada.');
-  }
-
-  // Verificar cliente si se envía
-  if (id_cliente) {
-    const cliente = await prisma.cliente.findFirst({ where: { id: Number(id_cliente), estado: true } });
-    if (!cliente) throw ApiError.badRequest('El cliente indicado no existe o está inactivo.');
-  }
-
-  // Verificar estatus
-  if (!ESTATUS_FACTURA.includes(estatus)) {
-    throw ApiError.badRequest(`Estatus inválido. Valores permitidos: ${ESTATUS_FACTURA.join(', ')}`);
-  }
-
-  // Ejecutar todo en una transacción
-  const factura = await prisma.$transaction(async (tx) => {
-    let subtotal = 0;
-    let total_impuestos = 0;
-    const detallesData = [];
-
-    for (const item of detalles) {
-      const cantidad = Number(item.cantidad);
-      const precio_unitario = Number(item.precio_unitario);
-      const valor_impuesto = Number(item.valor_impuesto ?? 0);
-      const subtotal_item = cantidad * precio_unitario;
-
-      if (item.id_material) {
-        const material = await tx.materiales_repuestos.findUnique({
-          where: { id_material: Number(item.id_material) },
-        });
-        if (!material) throw ApiError.badRequest(`El material con id ${item.id_material} no existe.`);
-        if (material.stock < cantidad) {
-          throw ApiError.conflict(
-            `Stock insuficiente para "${material.nombre}" (disponible: ${material.stock}, solicitado: ${cantidad}).`
-          );
-        }
-<<<<<<< HEAD
-        // Descuento automático de inventario
-        await tx.materiales_repuestos.update({
-          where: { id_material: material.id_material },
-=======
-        // Descuento automatico de inventario (regla de negocio)
-        await tx.material.update({
-          where: { id: material.id },
-=======
 // ─────────────────────────────────────────────
 // POST /api/facturas
 // Crea una factura asociada a una OT.
@@ -302,54 +143,10 @@ async function crear(req, res) {
         // Descuento automático de inventario
         await tx.materiales_repuestos.update({
           where: { id_material: material.id_material },
->>>>>>> feature/ordenes-trabajo
->>>>>>> b45b674414d60c146ad3dda0e6fade74198f150f
           data: { stock: { decrement: cantidad } },
         });
       }
 
-<<<<<<< HEAD
-      subtotal += subtotal_item;
-      total_impuestos += valor_impuesto * cantidad;
-
-=======
-<<<<<<< HEAD
->>>>>>> b45b674414d60c146ad3dda0e6fade74198f150f
-      detallesData.push({
-        id_material: item.id_material ? Number(item.id_material) : null,
-        cantidad,
-        precio_unitario,
-        valor_impuesto,
-        subtotal_item,
-      });
-    }
-
-    const total = Number((subtotal + total_impuestos).toFixed(2));
-    subtotal = Number(subtotal.toFixed(2));
-    total_impuestos = Number(total_impuestos.toFixed(2));
-
-    // Crear la factura con sus detalles
-    const nuevaFactura = await tx.factura.create({
-      data: {
-        otId: Number(otId),
-        id_cliente: id_cliente ? Number(id_cliente) : null,
-        subtotal,
-        total_impuestos,
-        total,
-        estatus,
-        factura_detalles: { create: detallesData },
-        // Vincular diagnósticos si se envían
-        ...(diagnosticos.length > 0 && {
-          factura_diagnostico_puente: {
-            create: diagnosticos.map((idDx) => ({ id_diagnostico: Number(idDx) })),
-          },
-        }),
-      },
-      include,
-    });
-<<<<<<< HEAD
-=======
-=======
       subtotal += subtotal_item;
       total_impuestos += valor_impuesto * cantidad;
 
@@ -385,7 +182,6 @@ async function crear(req, res) {
       },
       include,
     });
->>>>>>> b45b674414d60c146ad3dda0e6fade74198f150f
 
     // Crear cuenta por cobrar automáticamente si la factura queda pendiente
     if (estatus === 'Pendiente') {
@@ -401,64 +197,11 @@ async function crear(req, res) {
     }
 
     return nuevaFactura;
-<<<<<<< HEAD
-=======
->>>>>>> feature/ordenes-trabajo
->>>>>>> b45b674414d60c146ad3dda0e6fade74198f150f
   });
 
   res.status(201).json(factura);
 }
 
-<<<<<<< HEAD
-// ─────────────────────────────────────────────
-// PUT /api/facturas/:id
-// Actualiza datos de una factura (solo si está en estatus "Pendiente")
-// body: { id_cliente?, estatus?, detalles? }
-// ─────────────────────────────────────────────
-async function actualizar(req, res) {
-=======
-<<<<<<< HEAD
-// PATCH /api/facturas/:id/pago  -> registrar pago / cambiar estadoPago
-async function registrarPago(req, res) {
->>>>>>> b45b674414d60c146ad3dda0e6fade74198f150f
-  const id = Number(req.params.id);
-  const { id_cliente, estatus } = req.body;
-
-  const facturaExistente = await prisma.factura.findFirst({
-    where: { id, estado: true },
-  });
-  if (!facturaExistente) throw ApiError.notFound('Factura no encontrada.');
-
-  if (facturaExistente.estatus === 'Anulada') {
-    throw ApiError.conflict('No se puede modificar una factura anulada.');
-  }
-
-  if (estatus && !ESTATUS_FACTURA.includes(estatus)) {
-    throw ApiError.badRequest(`Estatus inválido. Valores permitidos: ${ESTATUS_FACTURA.join(', ')}`);
-  }
-
-  if (id_cliente) {
-    const cliente = await prisma.cliente.findFirst({ where: { id: Number(id_cliente), estado: true } });
-    if (!cliente) throw ApiError.badRequest('El cliente indicado no existe o está inactivo.');
-  }
-
-  const factura = await prisma.factura.update({
-    where: { id },
-    data: {
-      ...(id_cliente !== undefined && { id_cliente: id_cliente ? Number(id_cliente) : null }),
-      ...(estatus && { estatus }),
-    },
-    include,
-  });
-
-  res.json(factura);
-}
-
-<<<<<<< HEAD
-=======
-module.exports = { listar, obtener, crear, registrarPago };
-=======
 // ─────────────────────────────────────────────
 // PUT /api/facturas/:id
 // Actualiza datos de una factura (solo si está en estatus "Pendiente")
@@ -498,7 +241,6 @@ async function actualizar(req, res) {
   res.json(factura);
 }
 
->>>>>>> b45b674414d60c146ad3dda0e6fade74198f150f
 // ─────────────────────────────────────────────
 // PATCH /api/facturas/:id/estatus
 // Cambia el estatus de la factura.
@@ -623,9 +365,4 @@ async function eliminar(req, res) {
   res.status(204).send();
 }
 
-<<<<<<< HEAD
 module.exports = { listar, obtener, crear, actualizar, cambiarEstatus, eliminar };
-=======
-module.exports = { listar, obtener, crear, actualizar, cambiarEstatus, eliminar };
->>>>>>> feature/ordenes-trabajo
->>>>>>> b45b674414d60c146ad3dda0e6fade74198f150f
