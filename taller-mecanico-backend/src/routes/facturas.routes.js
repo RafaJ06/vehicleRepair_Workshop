@@ -1,5 +1,13 @@
 const { Router } = require('express');
+<<<<<<< HEAD
 const { body, param, query } = require('express-validator');
+=======
+<<<<<<< HEAD
+const { body, param } = require('express-validator');
+=======
+const { body, param, query } = require('express-validator');
+>>>>>>> feature/ordenes-trabajo
+>>>>>>> b45b674414d60c146ad3dda0e6fade74198f150f
 const ctrl = require('../controllers/facturas.controller');
 const asyncHandler = require('../utils/asyncHandler');
 const validate = require('../middlewares/validate.middleware');
@@ -7,6 +15,204 @@ const { verifyToken, authorize } = require('../middlewares/auth.middleware');
 
 const router = Router();
 
+<<<<<<< HEAD
+// Todas las rutas requieren autenticación
+=======
+<<<<<<< HEAD
+>>>>>>> b45b674414d60c146ad3dda0e6fade74198f150f
+router.use(verifyToken);
+
+/**
+ * @swagger
+ * tags:
+ *   name: Facturas
+ *   description: Gestión de facturas del taller mecánico
+ */
+
+/**
+ * @swagger
+ * /facturas:
+ *   get:
+ *     summary: Listar facturas
+ *     tags: [Facturas]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: query
+ *         name: otId
+ *         schema:
+ *           type: integer
+ *         description: Filtrar por ID de orden de trabajo
+ *       - in: query
+ *         name: clienteId
+ *         schema:
+ *           type: integer
+ *         description: Filtrar por ID de cliente
+ *       - in: query
+ *         name: estatus
+ *         schema:
+ *           type: string
+ *           enum: [Pendiente, Pagada, Anulada]
+ *         description: Filtrar por estatus de la factura
+ *       - in: query
+ *         name: page
+ *         schema:
+ *           type: integer
+ *           default: 1
+ *       - in: query
+ *         name: limit
+ *         schema:
+ *           type: integer
+ *           default: 20
+ *     responses:
+ *       200:
+ *         description: Lista paginada de facturas
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 data:
+ *                   type: array
+ *                   items:
+ *                     $ref: '#/components/schemas/Factura'
+ *                 total:
+ *                   type: integer
+ *                 page:
+ *                   type: integer
+ *                 limit:
+ *                   type: integer
+ */
+router.get(
+  '/',
+  [
+    query('otId').optional().isInt().withMessage('otId debe ser un entero'),
+    query('clienteId').optional().isInt().withMessage('clienteId debe ser un entero'),
+    query('estatus').optional().isIn(['Pendiente', 'Pagada', 'Anulada']).withMessage('Estatus inválido'),
+    query('page').optional().isInt({ min: 1 }),
+    query('limit').optional().isInt({ min: 1, max: 100 }),
+  ],
+  validate,
+  asyncHandler(ctrl.listar)
+);
+
+/**
+ * @swagger
+ * /facturas/{id}:
+ *   get:
+ *     summary: Obtener una factura por ID
+ *     tags: [Facturas]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: integer
+ *     responses:
+ *       200:
+ *         description: Datos de la factura
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Factura'
+ *       404:
+ *         description: Factura no encontrada
+ */
+router.get('/:id', param('id').isInt(), validate, asyncHandler(ctrl.obtener));
+
+/**
+ * @swagger
+ * /facturas:
+ *   post:
+ *     summary: Crear una nueva factura
+ *     description: |
+ *       Crea una factura asociada a una orden de trabajo.
+ *       - Si un detalle tiene `id_material`, se descuenta del inventario automáticamente.
+ *       - Si el estatus es "Pendiente", se crea automáticamente una cuenta por cobrar.
+ *     tags: [Facturas]
+ *     security:
+ *       - bearerAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - otId
+ *               - detalles
+ *             properties:
+ *               otId:
+ *                 type: integer
+ *                 description: ID de la orden de trabajo
+ *               id_cliente:
+ *                 type: integer
+ *                 description: ID del cliente (opcional)
+ *               estatus:
+ *                 type: string
+ *                 enum: [Pendiente, Pagada]
+ *                 default: Pendiente
+ *               detalles:
+ *                 type: array
+ *                 minItems: 1
+ *                 items:
+ *                   type: object
+ *                   required:
+ *                     - cantidad
+ *                     - precio_unitario
+ *                     - valor_impuesto
+ *                   properties:
+ *                     id_material:
+ *                       type: integer
+ *                       description: ID del material/repuesto (opcional, si es un servicio puro se omite)
+ *                     cantidad:
+ *                       type: integer
+ *                     precio_unitario:
+ *                       type: number
+ *                       format: decimal
+ *                     valor_impuesto:
+ *                       type: number
+ *                       format: decimal
+ *                       description: Valor de impuesto por unidad
+ *               diagnosticos:
+ *                 type: array
+ *                 items:
+ *                   type: integer
+ *                 description: IDs de diagnósticos a vincular con la factura
+ *           example:
+ *             otId: 5
+ *             id_cliente: 2
+ *             estatus: Pendiente
+ *             detalles:
+ *               - id_material: 10
+ *                 cantidad: 2
+ *                 precio_unitario: 150.00
+ *                 valor_impuesto: 27.00
+ *               - cantidad: 1
+ *                 precio_unitario: 200.00
+ *                 valor_impuesto: 36.00
+ *             diagnosticos: [3]
+ *     responses:
+ *       201:
+ *         description: Factura creada exitosamente
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Factura'
+ *       400:
+ *         description: Datos inválidos
+ *       409:
+ *         description: La OT ya tiene una factura activa, o stock insuficiente
+ */
+router.post(
+  '/',
+  authorize('recepcionista', 'administrador'),
+<<<<<<< HEAD
+=======
+  [body('otId').isInt(), body('formaPago').notEmpty(), body('items').isArray({ min: 1 })],
+=======
 // Todas las rutas requieren autenticación
 router.use(verifyToken);
 
@@ -197,6 +403,7 @@ router.get('/:id', param('id').isInt(), validate, asyncHandler(ctrl.obtener));
 router.post(
   '/',
   authorize('recepcionista', 'administrador'),
+>>>>>>> b45b674414d60c146ad3dda0e6fade74198f150f
   [
     body('otId').isInt().withMessage('otId es requerido y debe ser un entero'),
     body('id_cliente').optional().isInt().withMessage('id_cliente debe ser un entero'),
@@ -207,10 +414,69 @@ router.post(
     body('detalles.*.valor_impuesto').isFloat({ min: 0 }).withMessage('valor_impuesto debe ser un número positivo'),
     body('diagnosticos').optional().isArray().withMessage('diagnosticos debe ser un arreglo de IDs'),
   ],
+<<<<<<< HEAD
+=======
+>>>>>>> feature/ordenes-trabajo
+>>>>>>> b45b674414d60c146ad3dda0e6fade74198f150f
   validate,
   asyncHandler(ctrl.crear)
 );
 
+<<<<<<< HEAD
+/**
+ * @swagger
+ * /facturas/{id}:
+ *   put:
+ *     summary: Actualizar datos de una factura
+ *     description: Solo permite actualizar facturas en estatus "Pendiente". No permite modificar los detalles ni el monto.
+ *     tags: [Facturas]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: integer
+ *     requestBody:
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               id_cliente:
+ *                 type: integer
+ *               estatus:
+ *                 type: string
+ *                 enum: [Pendiente, Pagada, Anulada]
+ *     responses:
+ *       200:
+ *         description: Factura actualizada
+ *       404:
+ *         description: Factura no encontrada
+ *       409:
+ *         description: No se puede modificar una factura anulada
+ */
+router.put(
+  '/:id',
+=======
+<<<<<<< HEAD
+router.patch(
+  '/:id/pago',
+>>>>>>> b45b674414d60c146ad3dda0e6fade74198f150f
+  authorize('recepcionista', 'administrador'),
+  [
+    param('id').isInt(),
+    body('id_cliente').optional().isInt(),
+    body('estatus').optional().isIn(['Pendiente', 'Pagada', 'Anulada']).withMessage('Estatus inválido'),
+  ],
+  validate,
+  asyncHandler(ctrl.actualizar)
+);
+
+<<<<<<< HEAD
+=======
+=======
 /**
  * @swagger
  * /facturas/{id}:
@@ -257,6 +523,7 @@ router.put(
   asyncHandler(ctrl.actualizar)
 );
 
+>>>>>>> b45b674414d60c146ad3dda0e6fade74198f150f
 /**
  * @swagger
  * /facturas/{id}/estatus:
@@ -409,4 +676,9 @@ router.delete(
  *             type: object
  */
 
+<<<<<<< HEAD
 module.exports = router;
+=======
+>>>>>>> feature/ordenes-trabajo
+module.exports = router;
+>>>>>>> b45b674414d60c146ad3dda0e6fade74198f150f
