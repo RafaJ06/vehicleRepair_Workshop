@@ -1,5 +1,9 @@
 const { Router } = require('express');
+<<<<<<< HEAD
 const { body, param, query } = require('express-validator');
+=======
+const { body, param } = require('express-validator');
+>>>>>>> origin/development
 const ctrl = require('../controllers/facturas.controller');
 const asyncHandler = require('../utils/asyncHandler');
 const validate = require('../middlewares/validate.middleware');
@@ -7,6 +11,7 @@ const { verifyToken, authorize } = require('../middlewares/auth.middleware');
 
 const router = Router();
 
+<<<<<<< HEAD
 // Todas las rutas requieren autenticación
 router.use(verifyToken);
 
@@ -207,10 +212,22 @@ router.post(
     body('detalles.*.valor_impuesto').isFloat({ min: 0 }).withMessage('valor_impuesto debe ser un número positivo'),
     body('diagnosticos').optional().isArray().withMessage('diagnosticos debe ser un arreglo de IDs'),
   ],
+=======
+router.use(verifyToken);
+
+router.get('/', asyncHandler(ctrl.listar));
+router.get('/:id', param('id').isInt(), validate, asyncHandler(ctrl.obtener));
+
+router.post(
+  '/',
+  authorize('recepcionista', 'administrador'),
+  [body('otId').isInt(), body('formaPago').notEmpty(), body('items').isArray({ min: 1 })],
+>>>>>>> origin/development
   validate,
   asyncHandler(ctrl.crear)
 );
 
+<<<<<<< HEAD
 /**
  * @swagger
  * /facturas/{id}:
@@ -409,4 +426,14 @@ router.delete(
  *             type: object
  */
 
+=======
+router.patch(
+  '/:id/pago',
+  authorize('recepcionista', 'administrador'),
+  [param('id').isInt(), body('estadoPago').isIn(['PENDIENTE', 'PARCIAL', 'PAGADA'])],
+  validate,
+  asyncHandler(ctrl.registrarPago)
+);
+
+>>>>>>> origin/development
 module.exports = router;

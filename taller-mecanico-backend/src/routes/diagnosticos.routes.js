@@ -13,9 +13,20 @@ router.get('/', asyncHandler(ctrl.listar));
 router.post(
   '/',
   authorize('mecanico', 'supervisor', 'administrador'),
+<<<<<<< HEAD
   [body('otId').isInt(), body('fallaDetectada').notEmpty().withMessage('fallaDetectada es requerida')],
+=======
+  [
+    body('otId').isInt().withMessage('otId es requerido y debe ser un número entero'), 
+    body('fallaDetectada').notEmpty().withMessage('fallaDetectada es requerida')
+  ],
+>>>>>>> origin/development
   validate,
   asyncHandler(ctrl.crear)
 );
 
+<<<<<<< HEAD
 module.exports = router;
+=======
+module.exports = router;
+>>>>>>> origin/development

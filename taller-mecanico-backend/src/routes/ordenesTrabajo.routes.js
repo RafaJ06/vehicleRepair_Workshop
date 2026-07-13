@@ -1,5 +1,9 @@
 const { Router } = require('express');
+<<<<<<< HEAD
 const { body, param, query } = require('express-validator');
+=======
+const { body, param } = require('express-validator');
+>>>>>>> origin/development
 const ctrl = require('../controllers/ordenesTrabajo.controller');
 const asyncHandler = require('../utils/asyncHandler');
 const validate = require('../middlewares/validate.middleware');
@@ -7,6 +11,7 @@ const { verifyToken, authorize } = require('../middlewares/auth.middleware');
 
 const router = Router();
 
+<<<<<<< HEAD
 // Todas las rutas requieren autenticación
 router.use(verifyToken);
 
@@ -149,11 +154,26 @@ router.post(
   [
     body('id_diagnostico').optional().isInt().withMessage('id_diagnostico debe ser un entero'),
     body('mecanicoId').optional().isInt().withMessage('mecanicoId debe ser un entero'),
+=======
+router.use(verifyToken);
+
+router.get('/', asyncHandler(ctrl.listar));
+router.get('/:id', param('id').isInt(), validate, asyncHandler(ctrl.obtener));
+
+router.post(
+  '/',
+  authorize('recepcionista', 'administrador'),
+  [
+    body('clienteId').isInt(),
+    body('vehiculoId').isInt(),
+    body('problemaReportado').notEmpty().withMessage('problemaReportado es requerido'),
+>>>>>>> origin/development
   ],
   validate,
   asyncHandler(ctrl.crear)
 );
 
+<<<<<<< HEAD
 /**
  * @swagger
  * /ordenes-trabajo/{id}:
@@ -239,10 +259,17 @@ router.patch(
   '/:id/asignar-mecanico',
   authorize('supervisor', 'administrador'),
   [param('id').isInt(), body('mecanicoId').isInt().withMessage('mecanicoId es requerido y debe ser un entero')],
+=======
+router.patch(
+  '/:id/asignar-mecanico',
+  authorize('supervisor', 'administrador'),
+  [param('id').isInt(), body('mecanicoId').isInt()],
+>>>>>>> origin/development
   validate,
   asyncHandler(ctrl.asignarMecanico)
 );
 
+<<<<<<< HEAD
 /**
  * @swagger
  * /ordenes-trabajo/{id}/estatus:
@@ -364,4 +391,25 @@ router.delete(
  *           nullable: true
  */
 
+=======
+router.patch(
+  '/:id/estado',
+  authorize('mecanico', 'supervisor', 'recepcionista', 'administrador'),
+  [
+    param('id').isInt(),
+    body('estado').isIn([
+      'ABIERTA',
+      'EN_DIAGNOSTICO',
+      'EN_REPARACION',
+      'ESPERANDO_REPUESTOS',
+      'FINALIZADA',
+      'CERRADA',
+      'CANCELADA',
+    ]),
+  ],
+  validate,
+  asyncHandler(ctrl.cambiarEstado)
+);
+
+>>>>>>> origin/development
 module.exports = router;
