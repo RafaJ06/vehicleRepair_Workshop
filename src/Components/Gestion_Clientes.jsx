@@ -216,7 +216,7 @@ const Gestion_Clientes = () => {
   const [tiposLoading, setTiposLoading] = useState(API_FEATURES.tiposIdentificacion);
   const [tiposError, setTiposError] = useState(API_FEATURES.tiposIdentificacion ? '' : TYPE_MESSAGES.endpoint);
   const [formData, setFormData] = useState({
-    id_tipo_identificacion: '',
+    id_tipo_identificacion: '1',
     identificacion: '',
     nombre: '',
     telefono: '',
