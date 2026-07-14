@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { AlertCircle, Plus, Edit, Trash2, X, Search, Filter, ChevronLeft, ChevronRight, ClipboardList, Wrench, Activity } from 'lucide-react';
 import { URL } from '../App';
@@ -25,6 +25,11 @@ const Revision = () => {
     clienteId: '', marca: '', modelo: '', anio: '', color: '', placa: '', chasis: ''
   });
 
+  // ================= ESTADOS PARA EL BUSCADOR DE CLIENTES =================
+  const [clientSearchText, setClientSearchText] = useState('');
+  const [isClientDropdownOpen, setIsClientDropdownOpen] = useState(false);
+  const clientDropdownRef = useRef(null);
+
   const [isHistoryModalOpen, setIsHistoryModalOpen] = useState(false);
   const [selectedVehicle, setSelectedVehicle] = useState(null);
   const [vehicleHistory, setVehicleHistory] = useState([]);
@@ -42,12 +47,16 @@ const Revision = () => {
     return { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` };
   };
 
-  const handleAuthError = (status) => {
-    if (status === 401 || status === 403) {
+  // 💡 MODIFICACIÓN: Separamos el 401 (Sesión expirada) del 403 (Acceso Denegado)
+  const handleAuthError = (status, customMessage) => {
+    if (status === 401) {
       localStorage.removeItem('token');
       localStorage.removeItem('usuario');
       navigate('/');
-      throw new Error('Sesión expirada.');
+      throw new Error('Sesión expirada. Vuelve a iniciar sesión.');
+    }
+    if (status === 403) {
+      throw new Error(customMessage || 'ACCESO DENEGADO: Tu rol no tiene permisos para esta acción.');
     }
   };
 
@@ -69,13 +78,21 @@ const Revision = () => {
         fetch(`${URL}/api/clientes`, { headers: getAuthHeaders() })
       ]);
 
-      handleAuthError(resVehiculos.status);
-      const dataVehiculos = await resVehiculos.json();
-      const dataClientes = await resClientes.json();
+      // Verificamos primero el acceso a vehículos
+      handleAuthError(resVehiculos.status, 'No tienes permisos para ver el listado de vehículos.');
+      
+      // Si el usuario no tiene permisos para ver clientes (ej. un mecánico), 
+      // atrapamos el 401, pero ignoramos el 403 para que no crashee la pantalla.
+      if (resClientes.status === 401) handleAuthError(401);
 
+      const dataVehiculos = await resVehiculos.json();
       setVehiculos(Array.isArray(dataVehiculos) ? dataVehiculos : []);
-      if (dataClientes && Array.isArray(dataClientes.data)) setClientes(dataClientes.data);
-      else if (Array.isArray(dataClientes)) setClientes(dataClientes);
+      
+      if (resClientes.ok) {
+        const dataClientes = await resClientes.json();
+        if (dataClientes && Array.isArray(dataClientes.data)) setClientes(dataClientes.data);
+        else if (Array.isArray(dataClientes)) setClientes(dataClientes);
+      }
       
     } catch (err) { setError(err.message); } 
     finally { setLoading(false); }
@@ -85,16 +102,32 @@ const Revision = () => {
     if (window.location.pathname.includes('/admin')) setCanEdit(false);
     else setCanEdit(true);
     fetchData();
-    
+  }, []);
+
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      if (clientDropdownRef.current && !clientDropdownRef.current.contains(event.target)) {
+        setIsClientDropdownOpen(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
 
   const handleDelete = async (id) => {
     if (!window.confirm("¿Estás seguro de que deseas eliminar este vehículo?")) return;
     try {
       const response = await fetch(`${URL}/api/vehiculos/${id}`, { method: 'DELETE', headers: getAuthHeaders() });
-      handleAuthError(response.status);
+      handleAuthError(response.status, 'Tu rol no tiene permisos para eliminar vehículos.');
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.error || errorData.message || 'Error al intentar eliminar el vehículo. Verifica que no tenga órdenes activas.');
+      }
+
       setVehiculos(vehiculos.filter(v => v.id !== id));
-    } catch (err) { alert(`Error: ${err.message}`); }
+      alert("Vehículo eliminado exitosamente.");
+    } catch (err) { alert(`No se pudo eliminar: ${err.message}`); }
   };
 
   let processedVehiculos = vehiculos.filter(vehiculo => {
@@ -124,12 +157,17 @@ const Revision = () => {
   const openCreateModal = () => {
     setEditingVehiculo(null);
     setFormData({ clienteId: '', marca: '', modelo: '', anio: '', color: '', placa: '', chasis: '' });
+    setClientSearchText(''); 
     setIsModalOpen(true);
   };
 
   const openEditModal = (vehiculo) => {
     setEditingVehiculo(vehiculo);
     setFormData({ ...vehiculo });
+    
+    const currentClient = clientes.find(c => c.id === vehiculo.clienteId);
+    setClientSearchText(currentClient ? `${currentClient.nombre} (ID: ${currentClient.identificacion})` : 'Cliente Desconocido');
+    
     setIsModalOpen(true);
   };
 
@@ -137,6 +175,11 @@ const Revision = () => {
 
   const handleModalSubmit = async (e) => {
     e.preventDefault();
+    if (!formData.clienteId) {
+      alert("Por favor, selecciona un cliente válido de la lista.");
+      return;
+    }
+
     setFormLoading(true);
     try {
       const endpoint = editingVehiculo ? `${URL}/api/vehiculos/${editingVehiculo.id}` : `${URL}/api/vehiculos`;
@@ -144,12 +187,11 @@ const Revision = () => {
       const payload = { ...formData, anio: Number(formData.anio), clienteId: Number(formData.clienteId) };
 
       const response = await fetch(endpoint, { method, headers: getAuthHeaders(), body: JSON.stringify(payload) });
-      handleAuthError(response.status);
+      handleAuthError(response.status, `No tienes permisos para ${editingVehiculo ? 'editar' : 'registrar'} vehículos.`);
       
       if (!response.ok) throw new Error('Error al guardar el vehículo');
       const vehicleData = await response.json();
 
-      // CREACIÓN AUTOMÁTICA DEL DIAGNÓSTICO INICIAL AL REGISTRAR
       if (!editingVehiculo) {
         await fetch(`${URL}/api/diagnosticos`, {
           method: 'POST',
@@ -168,10 +210,9 @@ const Revision = () => {
     finally { setFormLoading(false); }
   };
 
-  // ================= MODAL DE DIAGNÓSTICO (NUEVO REGISTRO) =================
+  // ================= MODAL DE DIAGNÓSTICO =================
   const openDiagnosisModal = (vehiculo) => {
     setSelectedVehicle(vehiculo);
-    // Limpiamos el formulario para asegurar que siempre se cree uno nuevo
     setDiagnosisFormData({
       presionBaja: '', presionAlta: '', temperatura: '', fallaDetectada: '', estatus: 'En Proceso'
     });
@@ -195,22 +236,20 @@ const Revision = () => {
         estatus: diagnosisFormData.estatus
       };
 
-      // 1. Crear el diagnóstico
       const response = await fetch(`${URL}/api/diagnosticos`, {
         method: 'POST',
         headers: getAuthHeaders(),
         body: JSON.stringify(payload)
       });
       
+      handleAuthError(response.status, 'Tu rol no tiene permisos para crear diagnósticos.');
+
       if (!response.ok) {
         const errData = await response.json();
         throw new Error(errData.error || 'Error al guardar el diagnóstico.');
       }
 
-      
       const nuevoDiagnostico = await response.json();
-
-      // 2. LÓGICA AUTOMATIZADA: Si el estatus es "En Proceso", creamos la Orden de Trabajo
       let mensajeExito = 'Nuevo diagnóstico guardado exitosamente.';
       
       if (diagnosisFormData.estatus === 'En Proceso') {
@@ -224,8 +263,13 @@ const Revision = () => {
           headers: getAuthHeaders(),
           body: JSON.stringify(otPayload)
         });
+        
+        if (otResponse.status === 401) handleAuthError(401);
 
-        if (otResponse.ok) {
+        // 💡 Si no tiene permisos para crear la OT, avisamos pero no rompemos el diagnóstico que ya se guardó
+        if (otResponse.status === 403) {
+          mensajeExito += ' (Pero tu rol no tiene permisos para generar la Orden de Trabajo automáticamente).';
+        } else if (otResponse.ok) {
           mensajeExito += ' Se ha generado la Orden de Trabajo automáticamente.';
         } else {
           mensajeExito += ' (Nota: Hubo un problema al generar la Orden de Trabajo automática).';
@@ -243,18 +287,17 @@ const Revision = () => {
     }
   };
 
-  
   const openHistoryModal = async (vehiculo) => {
     setSelectedVehicle(vehiculo);
     setIsHistoryModalOpen(true);
     setHistoryLoading(true);
     try {
-     
       const response = await fetch(`${URL}/api/vehiculos/${vehiculo.id}`, { headers: getAuthHeaders() });
+      handleAuthError(response.status, 'No tienes permisos para consultar este historial.');
+
       if (!response.ok) throw new Error('Error al obtener el historial');
       const data = await response.json();
       
-     
       const historial = data.ordenesTrabajo || data.diagnosticos || [];
       setVehicleHistory(Array.isArray(historial) ? historial : []);
     } catch (err) { alert(`Error al cargar detalles: ${err.message}`); } 
@@ -262,6 +305,11 @@ const Revision = () => {
   };
   
   const closeHistoryModal = () => { setIsHistoryModalOpen(false); setSelectedVehicle(null); };
+
+  const filteredClientes = clientes.filter(c => 
+    c.nombre.toLowerCase().includes(clientSearchText.toLowerCase()) || 
+    c.identificacion.includes(clientSearchText)
+  );
 
   return (
     <div className="dashboard-container">
@@ -384,7 +432,7 @@ const Revision = () => {
         )}
       </main>
 
-      
+      {/* ================= MODAL: NUEVO DIAGNÓSTICO ================= */}
       {isDiagnosisModalOpen && selectedVehicle && (
         <div className="custom-modal-overlay">
           <div className="custom-modal" style={{maxWidth: '650px'}}>
@@ -450,23 +498,72 @@ const Revision = () => {
         </div>
       )}
 
-     
+      {/* ================= MODAL DE REGISTRO VEHÍCULO ================= */}
       {isModalOpen && canEdit && (
          <div className="custom-modal-overlay">
-         <div className="custom-modal">
+         <div className="custom-modal" style={{ overflow: 'visible' }}>
            <div className="modal-header">
              <h3>{editingVehiculo ? 'EDITAR VEHÍCULO' : 'REGISTRAR VEHÍCULO'}</h3>
              <button className="close-modal-btn" onClick={closeModal}><X size={20} /></button>
            </div>
            
-           <form onSubmit={handleModalSubmit} className="modal-form">
-             <div className="form-group">
+           <form onSubmit={handleModalSubmit} className="modal-form" style={{ overflow: 'visible' }}>
+             
+             <div className="form-group" style={{ position: 'relative' }} ref={clientDropdownRef}>
                <label>Propietario (Cliente)</label>
-               <select required value={formData.clienteId} onChange={(e) => setFormData({...formData, clienteId: e.target.value})} disabled={!!editingVehiculo}>
-                 <option value="" style={{ backgroundColor: '#0a0d14' }}>-- Selecciona un cliente --</option>
-                 {clientes.map(c => <option key={c.id} value={c.id} style={{ backgroundColor: '#0a0d14' }}>{c.nombre} (ID: {c.identificacion})</option>)}
-               </select>
+               
+               <input
+                 type="text"
+                 required
+                 disabled={!!editingVehiculo}
+                 placeholder="Escribe el nombre o ID del cliente..."
+                 value={clientSearchText}
+                 onChange={(e) => {
+                   setClientSearchText(e.target.value);
+                   setFormData({ ...formData, clienteId: '' }); 
+                   setIsClientDropdownOpen(true);
+                 }}
+                 onFocus={() => !editingVehiculo && setIsClientDropdownOpen(true)}
+                 style={{
+                   width: '100%', padding: '0.75rem', backgroundColor: '#111622', 
+                   border: formData.clienteId ? '1px solid #10b981' : '1px solid #374151', 
+                   color: '#ffffff', borderRadius: '4px', outline: 'none'
+                 }}
+               />
+
+               {isClientDropdownOpen && !editingVehiculo && (
+                 <ul style={{
+                   position: 'absolute', top: '100%', left: 0, width: '100%', maxHeight: '200px',
+                   overflowY: 'auto', backgroundColor: '#0a0d14', border: '1px solid #374151',
+                   borderRadius: '0 0 4px 4px', zIndex: 10, listStyle: 'none', padding: 0, margin: 0,
+                   boxShadow: '0 10px 15px -3px rgba(0, 0, 0, 0.5)'
+                 }}>
+                   {filteredClientes.length === 0 ? (
+                     <li style={{ padding: '0.75rem', color: '#9ca3af', fontSize: '0.85rem' }}>No se encontraron clientes...</li>
+                   ) : (
+                     filteredClientes.map(c => (
+                       <li 
+                         key={c.id} 
+                         onClick={() => {
+                           setFormData({ ...formData, clienteId: c.id });
+                           setClientSearchText(`${c.nombre} (ID: ${c.identificacion})`);
+                           setIsClientDropdownOpen(false);
+                         }}
+                         style={{
+                           padding: '0.75rem', color: '#ffffff', fontSize: '0.85rem', cursor: 'pointer',
+                           borderBottom: '1px solid #1f2937', transition: 'background 0.2s'
+                         }}
+                         onMouseEnter={(e) => e.currentTarget.style.backgroundColor = 'rgba(255,255,255,0.05)'}
+                         onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
+                       >
+                         <strong>{c.nombre}</strong> <span style={{ color: '#9ca3af', marginLeft: '0.5rem' }}>(ID: {c.identificacion})</span>
+                       </li>
+                     ))
+                   )}
+                 </ul>
+               )}
              </div>
+
              <div className="form-group-row">
                <div className="form-group" style={{ flex: 1 }}><label>Marca</label><input type="text" required value={formData.marca} onChange={(e) => setFormData({...formData, marca: e.target.value})} /></div>
                <div className="form-group" style={{ flex: 1 }}><label>Modelo</label><input type="text" required value={formData.modelo} onChange={(e) => setFormData({...formData, modelo: e.target.value})} /></div>
@@ -488,6 +585,7 @@ const Revision = () => {
        </div>
       )}
 
+      {/* ================= MODAL HISTORIAL ================= */}
       {isHistoryModalOpen && selectedVehicle && (
         <div className="custom-modal-overlay">
           <div className="custom-modal history-modal">
