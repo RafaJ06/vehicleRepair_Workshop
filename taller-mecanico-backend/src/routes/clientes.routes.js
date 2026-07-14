@@ -13,9 +13,12 @@ const reglasCliente = [
     .notEmpty().withMessage('El id_tipo_identificacion es requerido')
     .isInt().withMessage('El id_tipo_identificacion debe ser un número entero'),
 
-  // 2. Validamos el número de documento (cédula, RNC, etc. ¡Te faltaba este!)
+  // 2. Validamos el número de documento: exactamente 11 digitos numericos (cedula RD)
   body('identificacion')
-    .notEmpty().withMessage('La identificacion es requerida'),
+  .notEmpty().withMessage('La identificacion es requerida')
+  .bail()
+  .customSanitizer((valor) => valor.replace(/[-\s]/g, '')) // quita guiones y espacios
+  .matches(/^\d{11}$/).withMessage('La identificacion debe tener exactamente 11 digitos numericos'),
 
   // 3. Validamos el nombre
   body('nombre')
