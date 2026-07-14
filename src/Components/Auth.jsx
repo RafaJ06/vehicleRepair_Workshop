@@ -32,34 +32,24 @@ const Auth = () => {
         throw new Error(data.message || 'Credenciales incorrectas');
       }
 
-      
-      if (data.token) {
-        localStorage.setItem('token', data.token);
-        localStorage.setItem('usuario', JSON.stringify(data.usuario || data)); 
-      } else {
+      if (!data.token) {
         throw new Error('El servidor no devolvió un token válido.');
       }
 
-      const encontrarRol = (obj) => {
-        if (!obj || typeof obj !== 'object') return '';
-        
-        if (obj.rol && obj.rol.nombre) return obj.rol.nombre;
-        if (obj.rol && typeof obj.rol === 'string') return obj.rol;
-        if (obj.role && typeof obj.role === 'string') return obj.role; 
-        
-        for (const key in obj) {
-          if (typeof obj[key] === 'object') {
-            const resultado = encontrarRol(obj[key]);
-            if (resultado) return resultado;
-          }
-        }
-        return ''; 
-      };
+      localStorage.setItem('token', data.token);
 
-      const rolEncontrado = encontrarRol(data);
-      const rolUsuario = String(rolEncontrado).toLowerCase().trim();
+      const usuario = data.usuario || data;
+      localStorage.setItem('usuario', JSON.stringify(usuario));
 
       
+      console.log('Respuesta del login:', data);
+
+      const rolUsuario = String(
+        usuario?.rol?.nombre || usuario?.rol || usuario?.role || ''
+      ).toLowerCase().trim();
+
+      console.log('Rol detectado:', rolUsuario);
+
       if (['admin', 'administrador', 'supervisor'].includes(rolUsuario)) {
         navigate('/admin'); 
       } else if (['mecanico', 'recepcionista', 'personal'].includes(rolUsuario)) {
@@ -67,8 +57,7 @@ const Auth = () => {
       } else if (['cliente', 'usuario'].includes(rolUsuario)) {
         navigate('/clientes'); 
       } else {
-        console.error("JSON Recibido desde la API:", data);
-        throw new Error(`Acceso denegado: El rol "${rolUsuario || 'Desconocido'}" no tiene un dashboard asignado.`);
+        throw new Error(`Acceso denegado: el rol "${rolUsuario || 'desconocido'}" no tiene un dashboard asignado.`);
       }
 
     } catch (err) {

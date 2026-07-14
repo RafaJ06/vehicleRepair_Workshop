@@ -1,8 +1,6 @@
 import React, { useState, useEffect } from 'react';
-// Importación de componentes y utilidades
-import { AdminHeader } from '../Components/Header'; // Asegúrate de usar la importación con llaves si cambiaste a Named Exports
+import { AdminHeader } from './Header'; 
 import { URL } from '../App';
-// Importación de iconos de lucide-react para la interfaz
 import { 
   Wrench, 
   Car, 
@@ -11,20 +9,13 @@ import {
   BarChart2, 
   TrendingUp, 
   Shield, 
-  UserCog, 
   ChevronRight,
   ChevronLeft
 } from 'lucide-react';
-// Estilos del panel de administración
 import '../Style/Dashboard_Admin.css';
 
 const Dashboard_Admin = () => {
-  
-  // ==========================================
-  // ESTADOS DEL COMPONENTE
-  // ==========================================
-  
-  // Estado para almacenar las métricas principales del dashboard
+ 
   const [dashboardData, setDashboardData] = useState({
     ordenesActivas: 0,
     enTaller: 0,
@@ -35,7 +26,6 @@ const Dashboard_Admin = () => {
     ticketPromedio: 0,
     usuariosActivos: 0
   });
-  // Estado para indicar si los datos principales se están cargando
   const [loading, setLoading] = useState(true);
 
   // Estados para gestionar la lista paginada de usuarios
@@ -43,10 +33,12 @@ const Dashboard_Admin = () => {
   const [loadingLista, setLoadingLista] = useState(false);
   const [page, setPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
-  const limit = 5; // Límite de usuarios por página
+  const limit = 5; 
 
-  
-  // Formatea un valor numérico a moneda 
+  // Estado para la tabla de monitoreo de órdenes
+  const [ordenesRecientes, setOrdenesRecientes] = useState([]);
+  const [loadingOrdenes, setLoadingOrdenes] = useState(true);
+
   const formatCurrency = (amount) => {
     return new Intl.NumberFormat('es-DO', { 
       style: 'currency', 
@@ -63,7 +55,6 @@ const Dashboard_Admin = () => {
     };
   };
 
-  
   // Efecto que carga los datos generales del dashboard. 
   useEffect(() => {
     const fetchDashboardData = async () => {
@@ -71,36 +62,29 @@ const Dashboard_Admin = () => {
         setLoading(true);
         const config = { headers: getAuthHeaders() };
 
-        // Obtener órdenes y calcular cantidades según su estado
         const resOrdenes = await fetch(`${URL}/api/reportes/ordenes-por-estado`, config);
         const ordenesPorEstado = await resOrdenes.json();
         const ordenesArray = Array.isArray(ordenesPorEstado) ? ordenesPorEstado : [];
         
-        // Filtra y suma las órdenes que no están cerradas ni canceladas
         const activas = ordenesArray
           .filter(o => !['CERRADA', 'CANCELADA'].includes(o.estado))
           .reduce((acc, o) => acc + (o.total || 0), 0);
           
-        // Filtra y suma las órdenes que están siendo trabajadas físicamente en el taller
         const enTaller = ordenesArray
           .filter(o => ['EN_DIAGNOSTICO', 'EN_REPARACION'].includes(o.estado))
           .reduce((acc, o) => acc + (o.total || 0), 0);
 
-        // Busca las órdenes que ya están terminadas y listas para el cliente
         const listos = ordenesArray
           .find(o => o.estado === 'LISTO' || o.estado === 'LISTO_PARA_ENTREGA')?.total || 0;
 
-        // Obtener alertas de inventario bajo 
         const resStock = await fetch(`${URL}/api/reportes/inventario-bajo-stock`, config);
         const stockData = await resStock.json();
         const alertasStock = Array.isArray(stockData) ? stockData.length : 0;
 
-        // Obtener el total de clientes registrados
         const resClientes = await fetch(`${URL}/api/clientes?limit=1`, config);
         const clientesData = await resClientes.json();
         const totalClientes = clientesData.total || 0;
 
-        // Obtener facturación total y ticket promedio
         const resFinanzas = await fetch(`${URL}/api/reportes/facturacion`, config);
         const finanzasData = await resFinanzas.json();
         const facturacionTotal = finanzasData.totalFacturado || 0;
@@ -108,14 +92,12 @@ const Dashboard_Admin = () => {
           ? facturacionTotal / finanzasData.cantidadFacturas 
           : 0;
 
-        // 5. Obtener total de usuarios activos en el sistema
         const resUsuarios = await fetch(`${URL}/api/usuarios`, config);
         const usuariosData = await resUsuarios.json();
         const usuariosActivos = Array.isArray(usuariosData) 
           ? usuariosData.filter(u => u.activo || u.estado).length 
           : 0;
 
-        // Actualizar el estado global con todos los datos 
         setDashboardData({
           ordenesActivas: activas,
           enTaller,
@@ -137,12 +119,11 @@ const Dashboard_Admin = () => {
     fetchDashboardData();
   }, []);
 
-  
+  // Efecto que carga los usuarios paginados
   useEffect(() => {
     const fetchPaginatedData = async () => {
       try {
         setLoadingLista(true);
-        // Solicita los usuarios especificando la página actual y el límite por página
         const res = await fetch(`${URL}/api/usuarios?page=${page}&limit=${limit}`, { 
           headers: getAuthHeaders() 
         });
@@ -151,9 +132,7 @@ const Dashboard_Admin = () => {
         if (data.data && data.totalPages !== undefined) {
           setUsuariosLista(data.data);
           setTotalPages(data.totalPages);
-        } 
-        
-        else if (Array.isArray(data)) {
+        } else if (Array.isArray(data)) {
           const startIndex = (page - 1) * limit;
           const paginatedItems = data.slice(startIndex, startIndex + limit);
           setUsuariosLista(paginatedItems);
@@ -169,6 +148,26 @@ const Dashboard_Admin = () => {
     fetchPaginatedData();
   }, [page]); 
 
+  // Efecto que carga las órdenes para la tabla detallada inferior
+  useEffect(() => {
+    const fetchOrdenesRecientes = async () => {
+      try {
+        setLoadingOrdenes(true);
+        const res = await fetch(`${URL}/api/ordenes-trabajo?limit=10`, { headers: getAuthHeaders() });
+        const data = await res.json();
+        const lista = Array.isArray(data.data) ? data.data : [];
+        
+        // Filtramos para ver solo las que están en curso
+        setOrdenesRecientes(lista.filter(ot => !['CERRADA', 'CANCELADA'].includes((ot.estatus || '').toUpperCase())));
+      } catch (error) {
+        console.error("Error al cargar órdenes recientes:", error);
+      } finally {
+        setLoadingOrdenes(false);
+      }
+    };
+
+    fetchOrdenesRecientes();
+  }, []);
 
   return (
     <div className="admin-container">
@@ -190,7 +189,6 @@ const Dashboard_Admin = () => {
           <h2 className="admin-section-title">OPERACIONES GENERALES</h2>
           
           <div className="stats-grid">
-            {/* Órdenes Activas */}
             <div className="stat-card">
               <div className="stat-header">
                 <span className="stat-label">ÓRDENES ACTIVAS</span>
@@ -202,7 +200,6 @@ const Dashboard_Admin = () => {
               </div>
             </div>
 
-            {/* Vehículos en taller */}
             <div className="stat-card">
               <div className="stat-header">
                 <span className="stat-label">EN TALLER</span>
@@ -214,7 +211,6 @@ const Dashboard_Admin = () => {
               </div>
             </div>
 
-            {/* Alertas de Inventario */}
             <div className="stat-card">
               <div className="stat-header">
                 <span className="stat-label">ALERTAS STOCK</span>
@@ -226,7 +222,6 @@ const Dashboard_Admin = () => {
               </div>
             </div>
 
-            {/* Total de clientes */}
             <div className="stat-card">
               <div className="stat-header">
                 <span className="stat-label">CLIENTES EN SISTEMA</span>
@@ -242,14 +237,12 @@ const Dashboard_Admin = () => {
         
         <div className="dashboard-bottom-grid">
           
-          
           <section className="dashboard-card widget-finance">
             <div className="widget-header">
               <div className="widget-title-group">
                 <BarChart2 size={20} className="widget-icon text-red-icon" />
                 <h2 className="widget-title">RENDIMIENTO FINANCIERO</h2>
               </div>
-              {/* Filtro de tiempo */}
               <select className="widget-select">
                 <option>ESTE MES</option>
                 <option>MES ANTERIOR</option>
@@ -257,8 +250,7 @@ const Dashboard_Admin = () => {
               </select>
             </div>
 
-            <div className="finance-stats-grid">
-              {/* Facturación */}
+            <div className="finance-stats-grid">              
               <div className="finance-sub-card">
                 <span className="finance-label">FACTURACIÓN TOTAL</span>
                 <div className="finance-value-group">
@@ -279,7 +271,6 @@ const Dashboard_Admin = () => {
               </div>
             </div>
 
-            {/* Gráfico de barras estático (Mockup) */}
             <div className="bar-chart-container">
               <div className="bar" style={{ height: '30%' }}></div>
               <div className="bar" style={{ height: '45%' }}></div>
@@ -291,7 +282,6 @@ const Dashboard_Admin = () => {
             </div>
           </section>
 
-          {/* Control de Acceso y Usuarios */}
           <section className="dashboard-card widget-access">
             <div className="widget-header">
               <div className="widget-title-group">
@@ -301,7 +291,7 @@ const Dashboard_Admin = () => {
             </div>
 
             <div className="access-items-container">
-              {/* Indicador de usuarios activos */}
+          
               <div className="access-item">
                 <div className="access-info">
                   <span className="access-item-title">USUARIOS ACTIVOS</span>
@@ -312,7 +302,6 @@ const Dashboard_Admin = () => {
                 </span>
               </div>
 
-              {/* Lista de usuarios */}
               <div style={{ marginTop: '1.5rem', backgroundColor: '#111622', padding: '1rem', borderRadius: '4px', border: '1px solid #1f2937' }}>
                 <span style={{ fontSize: '0.75rem', fontWeight: '800', color: '#d1d5db', letterSpacing: '0.05em' }}>REGISTRO DE USUARIOS</span>
                 
@@ -320,7 +309,6 @@ const Dashboard_Admin = () => {
                   {loadingLista ? (
                     <span style={{ fontSize: '0.8rem', color: '#9ca3af' }}>Cargando página {page}...</span>
                   ) : (
-                    // Mapeo del array de usuarios actual
                     usuariosLista.map(u => (
                       <div key={u.id} style={{ display: 'flex', justifyContent: 'space-between', padding: '0.5rem', borderBottom: '1px solid #1f2937' }}>
                         <span style={{ fontSize: '0.8rem', color: '#fff' }}>{u.nombre}</span>
@@ -330,9 +318,8 @@ const Dashboard_Admin = () => {
                   )}
                 </div>
 
-                {/* Controles de Paginación */}
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '1.5rem' }}>
-                  {/* Botón Página Anterior */}
+                  
                   <button 
                     onClick={() => setPage(p => Math.max(p - 1, 1))}
                     disabled={page === 1}
@@ -341,12 +328,10 @@ const Dashboard_Admin = () => {
                     <ChevronLeft size={16} />
                   </button>
 
-                  {/* Indicador de Página Actual */}
                   <span style={{ fontSize: '0.7rem', fontWeight: '700', color: '#9ca3af', letterSpacing: '0.1em' }}>
                     PÁGINA {page} DE {totalPages || 1}
                   </span>
 
-                  {/* Botón Página Siguiente */}
                   <button 
                     onClick={() => setPage(p => Math.min(p + 1, totalPages))}
                     disabled={page === totalPages || totalPages === 0}
@@ -361,6 +346,84 @@ const Dashboard_Admin = () => {
           </section>
 
         </div>
+
+        {/* =========================================================
+            NUEVA SECCIÓN: TABLA DE ÓRDENES EN CURSO CON DIAGNÓSTICO
+            ========================================================= */}
+        <section className="dashboard-card" style={{ marginTop: '1.5rem', overflowX: 'auto', padding: '2rem' }}>
+          <div className="widget-header" style={{ marginBottom: '1.5rem', borderBottom: '1px solid #1f2937', paddingBottom: '1rem' }}>
+            <div className="widget-title-group" style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+              <Wrench size={20} className="text-red-icon" style={{color: '#ef4444'}} />
+              <h2 className="widget-title" style={{ fontSize: '1.1rem', fontWeight: '900', color: '#ffffff', letterSpacing: '0.05em' }}>
+                MONITOREO DE ÓRDENES EN CURSO
+              </h2>
+            </div>
+          </div>
+
+          <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left' }}>
+            <thead>
+              <tr style={{ color: '#ef4444', fontSize: '0.75rem', letterSpacing: '0.05em', borderBottom: '1px solid #1f2937' }}>
+                <th style={{ padding: '1rem 0' }}>ID OT</th>
+                <th style={{ padding: '1rem 0' }}>VEHÍCULO</th>
+                <th style={{ padding: '1rem 0' }}>DIAGNÓSTICO / FALLA</th>
+                <th style={{ padding: '1rem 0' }}>MECÁNICO</th>
+                <th style={{ padding: '1rem 0' }}>ESTATUS</th>
+              </tr>
+            </thead>
+            <tbody>
+              {loadingOrdenes ? (
+                <tr>
+                  <td colSpan="5" style={{ textAlign: 'center', padding: '2rem', color: '#9ca3af' }}>Cargando detalles...</td>
+                </tr>
+              ) : ordenesRecientes.length === 0 ? (
+                <tr>
+                  <td colSpan="5" style={{ textAlign: 'center', padding: '2rem', color: '#9ca3af' }}>No hay órdenes en curso para mostrar.</td>
+                </tr>
+              ) : (
+                ordenesRecientes.map(ot => {
+                  const vehiculo = ot.diagnosticos?.vehiculos;
+                  const vehiculoPlaca = vehiculo?.placa || 'S/N Placa';
+                  const vehiculoInfo = vehiculo ? `${vehiculo.marca} ${vehiculo.modelo}` : 'Detalles no disponibles';
+                  const falla = ot.diagnosticos?.fallaDetectada || 'Sin diagnóstico registrado';
+                  const mecanico = ot.mecanico?.nombre || 'No asignado';
+
+                  return (
+                    <tr key={ot.id} style={{ borderBottom: '1px solid #1f2937' }}>
+                      <td style={{ padding: '1rem 0', color: '#fff', fontWeight: 'bold' }}>
+                        OT-{String(ot.id).padStart(4, '0')}
+                      </td>
+                      <td style={{ padding: '1rem 0' }}>
+                        <div style={{ color: '#fff', fontWeight: 'bold' }}>{vehiculoPlaca}</div>
+                        <div style={{ color: '#9ca3af', fontSize: '0.8rem' }}>{vehiculoInfo}</div>
+                      </td>
+                      <td style={{ padding: '1rem 0', color: '#d1d5db' }}>
+                        <div style={{ maxWidth: '280px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }} title={falla}>
+                          {falla}
+                        </div>
+                      </td>
+                      <td style={{ padding: '1rem 0', color: '#9ca3af' }}>
+                        {mecanico}
+                      </td>
+                      <td style={{ padding: '1rem 0' }}>
+                        <span style={{ 
+                          padding: '0.3rem 0.6rem', 
+                          borderRadius: '4px', 
+                          fontSize: '0.7rem', 
+                          fontWeight: 'bold', 
+                          backgroundColor: 'rgba(255, 255, 255, 0.05)', 
+                          border: '1px solid #374151', 
+                          color: '#d1d5db' 
+                        }}>
+                          {ot.estatus ? ot.estatus.toUpperCase() : 'DESCONOCIDO'}
+                        </span>
+                      </td>
+                    </tr>
+                  )
+                })
+              )}
+            </tbody>
+          </table>
+        </section>
 
       </main>
     </div>

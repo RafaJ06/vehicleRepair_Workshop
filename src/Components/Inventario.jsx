@@ -10,7 +10,7 @@ const Inventario = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   
-  // Estados para el Modal de Crear/Editar
+ 
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingItem, setEditingItem] = useState(null);
   const [formLoading, setFormLoading] = useState(false);
@@ -21,7 +21,7 @@ const Inventario = () => {
     id_impuesto: '' 
   });
 
-  // Estados exclusivos para el Modal de Ajustar Stock
+  
   const [isStockModalOpen, setIsStockModalOpen] = useState(false);
   const [stockItem, setStockItem] = useState(null);
   const [stockAmount, setStockAmount] = useState('');

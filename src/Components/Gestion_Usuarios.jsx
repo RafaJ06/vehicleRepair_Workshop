@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { AlertCircle, Plus, UserCog, Search, Filter, ChevronLeft, ChevronRight } from 'lucide-react';
+import { AlertCircle, Plus, UserCog, Search, Filter, ChevronLeft, ChevronRight, X } from 'lucide-react';
 import { URL } from '../App';
 import { AdminHeader } from './Header'; 
 import '../Style/Gestion_Usuarios.css';
@@ -10,11 +10,21 @@ const Gestion_Usuarios = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
 
-  // ================= ESTADOS DE CONTROLES (Buscador y Paginación) =================
+ 
   const [searchTerm, setSearchTerm] = useState('');
   const [sortOption, setSortOption] = useState('recientes'); 
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 8;
+
+ 
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [formLoading, setFormLoading] = useState(false);
+  const [formData, setFormData] = useState({
+    nombre: '',
+    email: '',
+    password: '',
+    rolID: '6' 
+  });
 
   const navigate = useNavigate();
 
@@ -27,6 +37,11 @@ const Gestion_Usuarios = () => {
     try {
       setLoading(true);
       const response = await fetch(`${URL}/api/usuarios`, { headers: getAuthHeaders() });
+      if (response.status === 401 || response.status === 403) {
+        localStorage.clear();
+        navigate('/');
+        throw new Error('Sesión expirada.');
+      }
       if (!response.ok) throw new Error('Error al obtener usuarios');
       
       const data = await response.json();
@@ -41,8 +56,26 @@ const Gestion_Usuarios = () => {
   };
 
   useEffect(() => {
+    // 1. VALIDACIÓN DE SEGURIDAD (Solo Administradores)
+    const usuarioStr = localStorage.getItem('usuario');
+    if (usuarioStr) {
+      const usuarioActivo = JSON.parse(usuarioStr);
+      // Validamos si es Admin por ID o por nombre de rol
+      const esAdmin = usuarioActivo.rolId === 6 || usuarioActivo.rol?.nombre?.toLowerCase() === 'administrador' || usuarioActivo.rol === 'administrador';
+      
+      if (!esAdmin) {
+        alert('ACCESO DENEGADO: No tienes permisos para gestionar usuarios.');
+        navigate('/personal');
+        return; // Detenemos la ejecución
+      }
+    } else {
+      navigate('/');
+      return;
+    }
+
+    // 2. Si pasa la validación, cargamos los datos
     fetchUsuarios();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+    
   }, []);
 
   const handleSuspender = async (id) => {
@@ -58,9 +91,7 @@ const Gestion_Usuarios = () => {
     }
   };
 
-  // ================= LÓGICA DE PROCESAMIENTO (Búsqueda, Orden y Paginación) =================
-
-  // 1. Filtrar por búsqueda
+  // ================= LÓGICA DE PROCESAMIENTO =================
   let processedUsuarios = usuarios.filter(user => {
     const searchLower = searchTerm.toLowerCase();
     return (
@@ -71,7 +102,6 @@ const Gestion_Usuarios = () => {
     );
   });
 
-  // 2. Ordenar
   if (sortOption === 'nombre-a-z') {
     processedUsuarios.sort((a, b) => (a.nombre || '').localeCompare(b.nombre || ''));
   } else if (sortOption === 'nombre-z-a') {
@@ -82,13 +112,11 @@ const Gestion_Usuarios = () => {
     processedUsuarios.sort((a, b) => (a.estado === true ? 1 : 0) - (b.estado === true ? 1 : 0));
   }
 
-  // 3. Paginación
-  const totalPages = Math.ceil(processedUsuarios.length / itemsPerPage);
+  const totalPages = Math.ceil(processedUsuarios.length / itemsPerPage) || 1;
   const indexOfLastItem = currentPage * itemsPerPage;
   const indexOfFirstItem = indexOfLastItem - itemsPerPage;
   const currentItems = processedUsuarios.slice(indexOfFirstItem, indexOfLastItem);
 
-  // Reiniciar a la página 1 cuando se busca o se filtra
   useEffect(() => {
     setCurrentPage(1);
   }, [searchTerm, sortOption]);
@@ -96,12 +124,58 @@ const Gestion_Usuarios = () => {
   const nextPage = () => setCurrentPage(prev => Math.min(prev + 1, totalPages));
   const prevPage = () => setCurrentPage(prev => Math.max(prev - 1, 1));
 
+  // ================= MANEJO DEL MODAL DE CREACIÓN =================
+  const openCreateModal = () => {
+    setFormData({ nombre: '', email: '', password: '', rolID: '6' });
+    setIsModalOpen(true);
+  };
+
+  const closeModal = () => {
+    setIsModalOpen(false);
+  };
+
+  const handleModalSubmit = async (e) => {
+    e.preventDefault();
+    setFormLoading(true);
+    try {
+      const payload = { 
+        nombre: formData.nombre,
+        email: formData.email,
+        password: formData.password,
+        rolID: Number(formData.rolID) 
+      };
+
+      const response = await fetch(`${URL}/api/auth/registro`, {
+        method: 'POST',
+        headers: getAuthHeaders(),
+        body: JSON.stringify(payload)
+      });
+      
+      if (response.status === 401 || response.status === 403) {
+        localStorage.clear();
+        navigate('/');
+        throw new Error('Sesión expirada.');
+      }
+      
+      if (!response.ok) {
+        const errData = await response.json();
+        const errorMsg = errData.errors ? errData.errors.map(e => e.msg).join(', ') : (errData.error || errData.message);
+        throw new Error(errorMsg || 'Error al crear el usuario');
+      }
+
+      closeModal();
+      fetchUsuarios(); 
+    } catch (err) {
+      alert(`Error: ${err.message}`);
+    } finally {
+      setFormLoading(false);
+    }
+  };
 
   return (
     <div className="dashboard-container">
       <AdminHeader />
 
-      {/* ================= BANNER GIGANTE ================= */}
       <div className="hero-banner">
         <div className="hero-content">
           <h1>GESTIÓN DE <span className="text-red">USUARIOS</span></h1>
@@ -117,7 +191,7 @@ const Gestion_Usuarios = () => {
             <h2 className="page-subtitle">DIRECTORIO DEL SISTEMA</h2>
           </div>
           
-          <button className="btn-create-primary" onClick={() => alert("Abrir modal de crear usuario")}>
+          <button className="btn-create-primary" onClick={openCreateModal}>
             <Plus size={16} strokeWidth={3} />
             <span>NUEVO USUARIO</span>
           </button>
@@ -130,7 +204,6 @@ const Gestion_Usuarios = () => {
           </div>
         )}
 
-        {/* ================= BARRA DE CONTROLES (Buscador y Filtro) ================= */}
         <div className="controls-bar">
           <div className="search-wrapper">
             <Search className="search-icon" size={18} />
@@ -158,7 +231,6 @@ const Gestion_Usuarios = () => {
           </div>
         </div>
 
-        {/* ================= TABLA DE USUARIOS ================= */}
         <div className="table-wrapper">
           <table className="data-table">
             <thead>
@@ -205,25 +277,67 @@ const Gestion_Usuarios = () => {
           </table>
         </div>
 
-        {/* ================= PAGINACIÓN ================= */}
         {!loading && totalPages > 1 && (
           <div className="pagination-bar">
             <span className="pagination-info">
               Mostrando {indexOfFirstItem + 1} a {Math.min(indexOfLastItem, processedUsuarios.length)} de {processedUsuarios.length}
             </span>
             <div className="pagination-controls">
-              <button className="btn-page" onClick={prevPage} disabled={currentPage === 1}>
-                <ChevronLeft size={18} />
-              </button>
+              <button className="btn-page" onClick={prevPage} disabled={currentPage === 1}><ChevronLeft size={18} /></button>
               <span className="page-indicator">Página {currentPage} de {totalPages}</span>
-              <button className="btn-page" onClick={nextPage} disabled={currentPage === totalPages}>
-                <ChevronRight size={18} />
-              </button>
+              <button className="btn-page" onClick={nextPage} disabled={currentPage === totalPages}><ChevronRight size={18} /></button>
             </div>
           </div>
         )}
-
       </main>
+
+      {/* ================= MODAL DE CREAR USUARIO ================= */}
+      {isModalOpen && (
+        <div className="custom-modal-overlay">
+          <div className="custom-modal">
+            <div className="modal-header">
+              <h3>CREAR NUEVO USUARIO</h3>
+              <button className="close-modal-btn" onClick={closeModal}><X size={20} /></button>
+            </div>
+            
+            <form onSubmit={handleModalSubmit} className="modal-form">
+              <div className="form-group">
+                <label>Nombre Completo</label>
+                <input type="text" required value={formData.nombre} onChange={(e) => setFormData({...formData, nombre: e.target.value})} placeholder="Ej. Juan Pérez" />
+              </div>
+
+              <div className="form-group">
+                <label>Correo Electrónico (Para Login)</label>
+                <input type="email" required value={formData.email} onChange={(e) => setFormData({...formData, email: e.target.value})} placeholder="usuario@taller.com" />
+              </div>
+
+              <div className="form-group-row">
+                <div className="form-group" style={{ flex: 1 }}>
+                  <label>Contraseña</label>
+                  <input type="password" required minLength="8" value={formData.password} onChange={(e) => setFormData({...formData, password: e.target.value})} placeholder="Mínimo 8 caracteres" />
+                </div>
+                
+                <div className="form-group" style={{ flex: 1 }}>
+                  <label>Rol del Sistema</label>
+                  <select required value={formData.rolID} onChange={(e) => setFormData({...formData, rolID: e.target.value})}>
+                    <option value="6">Administrador (6)</option>
+                    <option value="7">Supervisor (7)</option>
+                    <option value="8">Mecánico (8)</option>
+                    <option value="9">Recepcionista (9)</option>
+                  </select>
+                </div>
+              </div>
+
+              <div className="modal-actions">
+                <button type="button" className="btn-cancel" onClick={closeModal}>CANCELAR</button>
+                <button type="submit" className="btn-confirm" disabled={formLoading}>
+                  {formLoading ? 'REGISTRANDO...' : 'REGISTRAR USUARIO'}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
