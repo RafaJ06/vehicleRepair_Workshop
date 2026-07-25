@@ -14,7 +14,7 @@ export const normalizarTipoIdentificacion = (tipo) => ({
 });
 
 export const listarTiposIdentificacion = async () => {
-  const response = await apiRequest('/api/tipos-identificacion');
+  const response = ["cedula", "pasaporte", "rnc"]; //await apiRequest('/api/tipos-identificacion');
   return getCollection(response)
     .map(normalizarTipoIdentificacion)
     .filter(tipo => tipo.estado && tipo.id != null && tipo.nombre);

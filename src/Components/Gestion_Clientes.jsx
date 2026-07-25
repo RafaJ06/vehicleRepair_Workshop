@@ -4,18 +4,18 @@ import { AlertCircle, Plus, Edit, Trash2, X, Users, Search, Filter, ChevronLeft,
 import { URL } from '../App';
 import { AdminHeader } from './Header'; 
 import { API_FEATURES } from '../config/apiFeactures';
-import { listarTiposIdentificacion } from '../services/tiposIdentificacion.service';
 import { listarCuentasPorCobrar } from '../services/cuentasPorCobrar.service';
 import '../Style/Gestion_Clientes.css';
 
 const formatHistoryDate = (value) => value ? new Intl.DateTimeFormat('es-DO', { dateStyle: 'medium' }).format(new Date(value)) : '—';
 const HistoryInfo = ({ label, value }) => <div className="cxc-info"><span>{label}</span><strong>{value ?? '—'}</strong></div>;
-const TYPE_MESSAGES = Object.freeze({
-  endpoint: 'El endpoint de tipos de identificación todavía no está disponible',
-  catalog: 'El catálogo existe en la base de datos, pero el endpoint todavía no está disponible',
-  network: 'No fue posible conectar con el servidor',
-  empty: 'No hay tipos de identificación activos registrados',
-});
+
+// ================= TIPOS DE IDENTIFICACIÓN (ESTÁTICOS) =================
+const TIPOS_IDENTIFICACION = [
+  { id: 1, nombre: 'Cédula' },
+  { id: 2, nombre: 'Pasaporte' },
+  { id: 3, nombre: 'RNC' },
+];
 
 const VehicleHistoryBase = ({ vehicle, getHeaders, onAuthError }) => {
   const [open, setOpen] = useState(false);
@@ -212,11 +212,8 @@ const Gestion_Clientes = () => {
   const [clientVehicles, setClientVehicles] = useState([]);
   const [detailLoading, setDetailLoading] = useState(false);
   const [detailError, setDetailError] = useState('');
-  const [tiposIdentificacion, setTiposIdentificacion] = useState([]);
-  const [tiposLoading, setTiposLoading] = useState(API_FEATURES.tiposIdentificacion);
-  const [tiposError, setTiposError] = useState(API_FEATURES.tiposIdentificacion ? '' : TYPE_MESSAGES.endpoint);
   const [formData, setFormData] = useState({
-    id_tipo_identificacion: '1',
+    id_tipo_identificacion: String(TIPOS_IDENTIFICACION[0].id),
     identificacion: '',
     nombre: '',
     telefono: '',
@@ -272,31 +269,6 @@ const Gestion_Clientes = () => {
     Promise.resolve().then(() => { if (active) fetchClientes(); });
     return () => { active = false; };
    
-  }, []);
-
-  useEffect(() => {
-    let active = true;
-    const loadTypes = async () => {
-      if (!API_FEATURES.tiposIdentificacion) return;
-      setTiposLoading(true);
-      setTiposError('');
-      try {
-        const types = await listarTiposIdentificacion();
-        if (!active) return;
-        setTiposIdentificacion(types);
-        if (!types.length) setTiposError(TYPE_MESSAGES.empty);
-      } catch (err) {
-        if (active) {
-          if (err.code === 'ENDPOINT_UNAVAILABLE') setTiposError(TYPE_MESSAGES.endpoint);
-          else if (err.code === 'NETWORK_ERROR') setTiposError(TYPE_MESSAGES.network);
-          else setTiposError(err.message);
-        }
-      } finally {
-        if (active) setTiposLoading(false);
-      }
-    };
-    Promise.resolve().then(loadTypes);
-    return () => { active = false; };
   }, []);
 
   const handleDelete = async (id) => {
@@ -371,14 +343,14 @@ const Gestion_Clientes = () => {
   // ================= MANEJO DE MODALES =================
   const openCreateModal = () => {
     setEditingCliente(null);
-    setFormData({ id_tipo_identificacion: '', identificacion: '', nombre: '', telefono: '', direccion: '', email: '' });
+    setFormData({ id_tipo_identificacion: String(TIPOS_IDENTIFICACION[0].id), identificacion: '', nombre: '', telefono: '', direccion: '', email: '' });
     setIsModalOpen(true);
   };
 
   const openEditModal = (cliente) => {
     setEditingCliente(cliente);
     setFormData({
-      id_tipo_identificacion: cliente.id_tipo_identificacion ? String(cliente.id_tipo_identificacion) : '',
+      id_tipo_identificacion: cliente.id_tipo_identificacion ? String(cliente.id_tipo_identificacion) : String(TIPOS_IDENTIFICACION[0].id),
       identificacion: cliente.identificacion || '',
       nombre: cliente.nombre || '',
       telefono: cliente.telefono || '',
@@ -395,10 +367,6 @@ const Gestion_Clientes = () => {
 
   const handleModalSubmit = async (e) => {
     e.preventDefault();
-    if (!API_FEATURES.tiposIdentificacion || tiposLoading || tiposError || !formData.id_tipo_identificacion) {
-      alert(tiposError || TYPE_MESSAGES.endpoint);
-      return;
-    }
     const identificationTypeId = Number(formData.id_tipo_identificacion);
     if (!Number.isInteger(identificationTypeId) || identificationTypeId <= 0) {
       alert('Seleccione un tipo de identificación válido');
@@ -570,13 +538,10 @@ const Gestion_Clientes = () => {
               <div className="client-form-grid">
                 <div className="client-form-field">
                   <label>TIPO DE IDENTIFICACIÓN</label>
-                  <select required value={formData.id_tipo_identificacion} disabled={tiposLoading || !API_FEATURES.tiposIdentificacion || Boolean(tiposError)} onChange={(e) => setFormData({...formData, id_tipo_identificacion: e.target.value})}>
-                    <option value="">Seleccione un tipo</option>
-                    {tiposIdentificacion.map(tipo => <option key={tipo.id} value={String(tipo.id)}>{tipo.nombre}</option>)}
+                  <select required value={formData.id_tipo_identificacion} onChange={(e) => setFormData({...formData, id_tipo_identificacion: e.target.value})}>
+                    {TIPOS_IDENTIFICACION.map(tipo => <option key={tipo.id} value={String(tipo.id)}>{tipo.nombre}</option>)}
                   </select>
-                  <span className={`client-field-status ${tiposError ? 'error' : ''}`}>
-                    {tiposLoading ? 'Cargando tipos...' : !API_FEATURES.tiposIdentificacion ? `${TYPE_MESSAGES.endpoint}. ${TYPE_MESSAGES.catalog}.` : tiposError || ''}
-                  </span>
+                  <span className="client-field-status" aria-hidden="true"></span>
                 </div>
                 <div className="client-form-field">
                   <label>NÚMERO DE IDENTIFICACIÓN</label>
@@ -602,7 +567,7 @@ const Gestion_Clientes = () => {
               </div>
               <div className="modal-actions">
                 <button type="button" className="btn-cancel" onClick={closeModal}>CANCELAR</button>
-                <button type="submit" className="btn-confirm" disabled={formLoading || tiposLoading || Boolean(tiposError) || !formData.id_tipo_identificacion || !formData.identificacion.trim() || !formData.nombre.trim()} title={tiposError || undefined}>
+                <button type="submit" className="btn-confirm" disabled={formLoading || !formData.id_tipo_identificacion || !formData.identificacion.trim() || !formData.nombre.trim()}>
                   {formLoading ? 'GUARDANDO...' : 'GUARDAR'}
                 </button>
               </div>

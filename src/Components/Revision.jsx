@@ -14,7 +14,7 @@ const Revision = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   
-  const [canEdit, setCanEdit] = useState(true);
+  const [canEdit,  setCanEdit] = useState(true);
 
   const [searchTerm, setSearchTerm] = useState('');
   const [sortOption, setSortOption] = useState('recientes'); 
@@ -102,7 +102,7 @@ const Revision = () => {
   };
 
   useEffect(() => {
-    if (window.location.pathname.includes('/admin')) setCanEdit(false);
+    if (window.location.pathname.includes('/admin')) setCanEdit(true);
     else setCanEdit(true);
     fetchData();
   }, []);
